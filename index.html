@@ -131,7 +131,7 @@
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
             <div class="p-6 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-center relative">
                 <button onclick="closeAnnouncementModal()" class="absolute top-3 right-4 text-blue-200 hover:text-white font-bold text-2xl leading-none">&times;</button>
-                
+                <div class="text-4xl mb-2">📣</div>
                 <h2 id="announcement-title" class="text-xl font-black tracking-tight">Announcement</h2>
             </div>
             <div class="p-6 bg-white text-center">
@@ -160,343 +160,324 @@
     </div>
 
     <script>
-    // --- 1. CONFIGURATION ---
-    const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co'; // <-- DEINE URL
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; // <-- DEIN KEY
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        // --- 1. CONFIGURATION ---
+        const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co'; // <-- DEINE URL
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; // <-- DEIN KEY
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // --- 2. STATE & ELEMENTS ---
-    let currentPlayerId = null;
-    let currentMatches = [];
-    let currentPredictions = [];
+        // --- 2. STATE & ELEMENTS ---
+        let currentPlayerId = null;
+        let currentMatches = [];
+        let currentPredictions = [];
 
-    // --- 3. AUTH & STARTUP LOGIC ---
-    async function authenticateUser() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const secretKey = urlParams.get('key');
-        if (!secretKey) return document.getElementById('error-screen').classList.remove('hidden');
-        const { data: player, error } = await supabaseClient.from('players').select('*').eq('passphrase', secretKey).single();
-        if (error || !player) return document.getElementById('error-screen').classList.remove('hidden');
-        loadDashboard(player);
-    }
+        // --- 3. AUTH & STARTUP LOGIC ---
+        async function authenticateUser() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const secretKey = urlParams.get('key');
 
-    function loadDashboard(player) {
-        currentPlayerId = player.id;
-        document.getElementById('user-nickname').textContent = player.nickname;
-        document.getElementById('user-score').textContent = player.score;
-        document.getElementById('loading-screen').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
+            if (!secretKey) return document.getElementById('error-screen').classList.remove('hidden');
 
-        fetchMatchesAndPredictions();
-        checkAndShowAnnouncement();
-    }
+            const { data: player, error } = await supabaseClient.from('players').select('*').eq('passphrase', secretKey).single();
 
-    // --- ANNOUNCEMENT LOGIC ---
-    async function checkAndShowAnnouncement() {
-        const { data, error } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
-        if (data && data.show_announcement && data.announcement_text) {
-            document.getElementById('announcement-title').textContent = data.announcement_title;
-            document.getElementById('announcement-text').textContent = data.announcement_text;
-            document.getElementById('announcement-modal').classList.remove('hidden');
-        } else {
+            if (error || !player) return document.getElementById('error-screen').classList.remove('hidden');
+
+            loadDashboard(player);
+        }
+
+        function loadDashboard(player) {
+            currentPlayerId = player.id;
+            document.getElementById('user-nickname').textContent = player.nickname;
+            document.getElementById('user-score').textContent = player.score;
+
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+
+            fetchMatchesAndPredictions();
+            checkAndShowAnnouncement();
+        }
+
+        // --- ANNOUNCEMENT LOGIC ---
+        async function checkAndShowAnnouncement() {
+            const { data, error } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
+            if (data && data.show_announcement && data.announcement_text) {
+                document.getElementById('announcement-title').textContent = data.announcement_title;
+                document.getElementById('announcement-text').textContent = data.announcement_text;
+                document.getElementById('announcement-modal').classList.remove('hidden');
+            } else {
+                checkAndShowBonusQuestions();
+            }
+        }
+
+        function closeAnnouncementModal() {
+            document.getElementById('announcement-modal').classList.add('hidden');
             checkAndShowBonusQuestions();
         }
-    }
 
-    function closeAnnouncementModal() {
-        document.getElementById('announcement-modal').classList.add('hidden');
-        checkAndShowBonusQuestions();
-    }
+        // --- BONUS QUESTIONS LOGIC ---
+        const OPENING_MATCH_DATE = new Date('2026-06-11T19:00:00Z');
+        const ALL_NATIONS = ["Argentina", "Belgium", "Brazil", "Canada", "Colombia", "Croatia", "Denmark", "England", "France", "Germany", "Italy", "Japan", "Morocco", "Mexico", "Netherlands", "Portugal", "Senegal", "South Korea", "Spain", "Switzerland", "Uruguay", "USA", "Wales"].sort();
+        const TOP_20_NATIONS = ["Spain", "France", "Argentina", "England", "Portugal", "Netherlands", "Brazil", "Morocco", "Belgium", "Germany", "Croatia", "Italy", "Colombia", "Senegal", "Mexico", "USA", "Uruguay", "Japan", "Switzerland", "Denmark"].sort();
+        const GROUPS_A_L = ["Group A", "Group B", "Group C", "Group D", "Group E", "Group F", "Group G", "Group H", "Group I", "Group J", "Group K", "Group L"];
+        const NUM_0_TO_104 = Array.from({length: 105}, (_, i) => i.toString());
+        const NUM_0_TO_12 = Array.from({length: 13}, (_, i) => i.toString());
 
-    // --- BONUS QUESTIONS LOGIC ---
-    const OPENING_MATCH_DATE = new Date('2026-06-11T19:00:00Z');
-    const ALL_NATIONS = ["Argentina", "Belgium", "Brazil", "Canada", "Colombia", "Croatia", "Denmark", "England", "France", "Germany", "Italy", "Japan", "Morocco", "Mexico", "Netherlands", "Portugal", "Senegal", "South Korea", "Spain", "Switzerland", "Uruguay", "USA", "Wales"].sort();
-    const TOP_20_NATIONS = ["Spain", "France", "Argentina", "England", "Portugal", "Netherlands", "Brazil", "Morocco", "Belgium", "Germany", "Croatia", "Italy", "Colombia", "Senegal", "Mexico", "USA", "Uruguay", "Japan", "Switzerland", "Denmark"].sort();
-    const GROUPS_A_L = ["Group A", "Group B", "Group C", "Group D", "Group E", "Group F", "Group G", "Group H", "Group I", "Group J", "Group K", "Group L"];
-    const NUM_0_TO_104 = Array.from({length: 105}, (_, i) => i.toString());
-    const NUM_0_TO_12 = Array.from({length: 13}, (_, i) => i.toString());
+        const BONUS_QUESTIONS = [
+            { id: 'bq1', text: 'BQ 1: Which nation will win the World Cup?', options: ALL_NATIONS },
+            { id: 'bq2', text: 'BQ 2: Which Top 20 nation will be eliminated in the group stage?', options: TOP_20_NATIONS },
+            { id: 'bq3', text: 'BQ 3: Which nation will achieve the highest victory (goal difference)?', options: ALL_NATIONS },
+            { id: 'bq4', text: 'BQ 4: Which group will have the most exciting table (lowest point diff)?', options: GROUPS_A_L },
+            { id: 'bq5', text: 'BQ 5: How many matches will end with a 0:0 clean sheet?', options: NUM_0_TO_104 },
+            { id: 'bq6', text: 'BQ 6: How many group winners will be eliminated in the Round of 32?', options: NUM_0_TO_12 }
+        ];
 
-    const BONUS_QUESTIONS = [
-        { id: 'bq1', text: 'BQ 1: Which nation will win the World Cup?', options: ALL_NATIONS },
-        { id: 'bq2', text: 'BQ 2: Which Top 20 nation will be eliminated in the group stage?', options: TOP_20_NATIONS },
-        { id: 'bq3', text: 'BQ 3: Which nation will achieve the highest victory (goal difference)?', options: ALL_NATIONS },
-        { id: 'bq4', text: 'BQ 4: Which group will have the most exciting table (lowest point diff)?', options: GROUPS_A_L },
-        { id: 'bq5', text: 'BQ 5: How many matches will end with a 0:0 clean sheet?', options: NUM_0_TO_104 },
-        { id: 'bq6', text: 'BQ 6: How many group winners will be eliminated in the Round of 32?', options: NUM_0_TO_12 }
-    ];
+        let unansweredQuestions = [];
 
-    let unansweredQuestions = [];
+        async function checkAndShowBonusQuestions() {
+            if (new Date() >= OPENING_MATCH_DATE) return;
 
-    async function checkAndShowBonusQuestions() {
-        if (new Date() >= OPENING_MATCH_DATE) return;
-        const { data: existingAnswers } = await supabaseClient.from('bonus_predictions').select('question_id').eq('player_id', currentPlayerId);
-        const answeredIds = existingAnswers ? existingAnswers.map(ans => ans.question_id) : [];
-        unansweredQuestions = BONUS_QUESTIONS.filter(q => !answeredIds.includes(q.id));
-        if (unansweredQuestions.length > 0) {
-            renderBonusQuestions();
-            document.getElementById('bonus-modal').classList.remove('hidden');
+            const { data: existingAnswers } = await supabaseClient.from('bonus_predictions').select('question_id').eq('player_id', currentPlayerId);
+            const answeredIds = existingAnswers ? existingAnswers.map(ans => ans.question_id) : [];
+            unansweredQuestions = BONUS_QUESTIONS.filter(q => !answeredIds.includes(q.id));
+
+            if (unansweredQuestions.length > 0) {
+                renderBonusQuestions();
+                document.getElementById('bonus-modal').classList.remove('hidden');
+            }
         }
-    }
 
-    function renderBonusQuestions() {
-        const container = document.getElementById('bonus-questions-container');
-        container.innerHTML = '';
-        unansweredQuestions.forEach(q => {
-            let optionsHtml = '<option value="" disabled selected>Select an option...</option>';
-            q.options.forEach(opt => { optionsHtml += `<option value="${opt.toUpperCase()}">${opt}</option>`; });
-            const div = document.createElement('div');
-            div.className = 'bg-slate-50 border border-slate-200 p-4 rounded-xl';
-            div.innerHTML = `<label class="block text-sm font-bold text-slate-800 mb-2">${q.text}</label><select id="answer-${q.id}" class="w-full border-2 border-slate-200 p-3 rounded-lg focus:border-blue-500 bg-white cursor-pointer font-medium text-slate-700">${optionsHtml}</select>`;
-            container.appendChild(div);
-        });
-    }
-
-    function closeBonusModal() { document.getElementById('bonus-modal').classList.add('hidden'); }
-
-    async function saveBonusAnswers() {
-        const answersToSave = [];
-        for (const q of unansweredQuestions) {
-            const val = document.getElementById(`answer-${q.id}`).value; 
-            if (val !== '') answersToSave.push({ player_id: currentPlayerId, question_id: q.id, answer: val });
+        function renderBonusQuestions() {
+            const container = document.getElementById('bonus-questions-container');
+            container.innerHTML = '';
+            unansweredQuestions.forEach(q => {
+                let optionsHtml = '<option value="" disabled selected>Select an option...</option>';
+                q.options.forEach(opt => { optionsHtml += `<option value="${opt.toUpperCase()}">${opt}</option>`; });
+                const div = document.createElement('div');
+                div.className = 'bg-slate-50 border border-slate-200 p-4 rounded-xl';
+                div.innerHTML = `<label class="block text-sm font-bold text-slate-800 mb-2">${q.text}</label><select id="answer-${q.id}" class="w-full border-2 border-slate-200 p-3 rounded-lg focus:border-blue-500 bg-white cursor-pointer font-medium text-slate-700">${optionsHtml}</select>`;
+                container.appendChild(div);
+            });
         }
-        if (answersToSave.length === 0) return closeBonusModal(); 
-        await supabaseClient.from('bonus_predictions').upsert(answersToSave);
-        closeBonusModal();
-        checkAndShowBonusQuestions(); 
-    }
 
-    // --- MATCHES LOGIC ---
-    async function fetchMatchesAndPredictions() {
-        const { data: matches } = await supabaseClient.from('matches').select('*').order('kickoff', { ascending: true });
-        const { data: predictions } = await supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId);
-        currentMatches = matches || [];
-        currentPredictions = predictions || [];
-        renderMatches();
-    }
+        function closeBonusModal() { document.getElementById('bonus-modal').classList.add('hidden'); }
 
-    function generateScoreOptions(val) {
-        let opts = '<option value="" disabled selected>-</option>';
-        for(let i=0; i<=15; i++) opts += `<option value="${i}" ${val!=='' && parseInt(val)===i ? 'selected' : ''}>${i}</option>`;
-        return opts;
-    }
+        async function saveBonusAnswers() {
+            const answersToSave = [];
+            for (const q of unansweredQuestions) {
+                const val = document.getElementById(`answer-${q.id}`).value; 
+                if (val !== '') answersToSave.push({ player_id: currentPlayerId, question_id: q.id, answer: val });
+            }
+            if (answersToSave.length === 0) return closeBonusModal(); 
+            
+            await supabaseClient.from('bonus_predictions').upsert(answersToSave);
+            closeBonusModal();
+            checkAndShowBonusQuestions(); 
+        }
+
+        // --- MATCHES LOGIC (MIT FLAGGEN) ---
+        async function fetchMatchesAndPredictions() {
+            const { data: matches } = await supabaseClient.from('matches').select('*').order('kickoff', { ascending: true });
+            const { data: predictions } = await supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId);
+            currentMatches = matches || [];
+            currentPredictions = predictions || [];
+            renderMatches();
+        }
+
+        function generateScoreOptions(val) {
+            let opts = '<option value="" disabled selected>-</option>';
+            for(let i=0; i<=15; i++) opts += `<option value="${i}" ${val!=='' && parseInt(val)===i ? 'selected' : ''}>${i}</option>`;
+            return opts;
+        }
 
         function renderMatches() {
-        const vm = document.getElementById('view-matches');
-        vm.innerHTML = ''; 
-        if (currentMatches.length === 0) return vm.innerHTML = '<p class="text-slate-500 text-center">No matches scheduled right now.</p>';
-        
-        currentMatches.forEach(match => {
-            const pred = currentPredictions.find(p => p.match_id === match.id);
-            const matchDate = new Date(match.kickoff).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
-            
-            // Flaggen HTML vorbereiten (nur anzeigen, wenn ein Link vorhanden ist)
-            const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
-            const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
+            const vm = document.getElementById('view-matches');
+            vm.innerHTML = ''; 
+            if (currentMatches.length === 0) return vm.innerHTML = '<p class="text-slate-500 text-center">No matches scheduled right now.</p>';
 
-            const card = document.createElement('div');
-            card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col mb-4';
-            card.innerHTML = `
-                <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide"><span class="font-bold">${matchDate}</span> • ${match.venue || 'TBD'}</div>
-                <div class="flex items-center justify-between mb-4 mt-2">
-                    <div class="w-[35%] flex items-center justify-end gap-2 pr-2">
-                        <span class="font-bold text-lg leading-tight text-right">${match.home_team}</span>
-                        ${homeFlag}
-                    </div>
-                    <div class="w-[30%] flex justify-center items-center gap-1">
-                        <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
-                        <span class="font-bold text-slate-400 mx-1">-</span>
-                        <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
-                    </div>
-                    <div class="w-[35%] flex items-center justify-start gap-2 pl-2">
-                        ${awayFlag}
-                        <span class="font-bold text-lg leading-tight text-left">${match.away_team}</span>
-                    </div>
-                </div>
-                <button onclick="savePrediction(${match.id})" class="w-full bg-blue-50 text-blue-700 font-semibold py-3 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white">${pred ? 'Update Prediction' : 'Save Prediction'}</button>
-            `;
-            vm.appendChild(card);
-        });
-    }
+            currentMatches.forEach(match => {
+                const pred = currentPredictions.find(p => p.match_id === match.id);
+                const matchDate = new Date(match.kickoff).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+                
+                // Flaggen HTML vorbereiten (nur anzeigen, wenn ein Link vorhanden ist)
+                const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
+                const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
 
-
-    async function savePrediction(matchId) {
-        const h = document.getElementById(`home-${matchId}`).value;
-        const a = document.getElementById(`away-${matchId}`).value;
-        if (h === '' || a === '') return alert('Please enter a valid score!');
-        const { error } = await supabaseClient.from('predictions').upsert({ player_id: currentPlayerId, match_id: matchId, home_pred: parseInt(h), away_pred: parseInt(a) }, { onConflict: 'player_id, match_id' });
-        if (!error) {
-            const btn = event.target;
-            btn.innerText = 'Saved! ?'; btn.className = 'w-full bg-green-500 text-white font-semibold py-3 rounded-lg transition-colors';
-            setTimeout(() => { btn.innerText = 'Update Prediction'; btn.className = 'w-full bg-blue-50 text-blue-700 font-semibold py-3 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white'; }, 2000);
+                const card = document.createElement('div');
+                card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col mb-4';
+                card.innerHTML = `
+                    <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide"><span class="font-bold">${matchDate}</span> • ${match.venue || 'TBD'}</div>
+                    <div class="flex items-center justify-between mb-4 mt-2">
+                        <div class="w-[35%] flex items-center justify-end gap-2 pr-2">
+                            <span class="font-bold text-lg leading-tight text-right">${match.home_team}</span>
+                            ${homeFlag}
+                        </div>
+                        <div class="w-[30%] flex justify-center items-center gap-1">
+                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                            <span class="font-bold text-slate-400 mx-1">-</span>
+                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                        </div>
+                        <div class="w-[35%] flex items-center justify-start gap-2 pl-2">
+                            ${awayFlag}
+                            <span class="font-bold text-lg leading-tight text-left">${match.away_team}</span>
+                        </div>
+                    </div>
+                    <button onclick="savePrediction(${match.id})" class="w-full bg-blue-50 text-blue-700 font-semibold py-3 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white">${pred ? 'Update Prediction' : 'Save Prediction'}</button>
+                `;
+                vm.appendChild(card);
+            });
         }
-    }
 
-    // --- TOURNAMENT LOGIC (NEU) ---
+        async function savePrediction(matchId) {
+            const h = document.getElementById(`home-${matchId}`).value;
+            const a = document.getElementById(`away-${matchId}`).value;
+            if (h === '' || a === '') return alert('Please enter a valid score!');
+            const { error } = await supabaseClient.from('predictions').upsert({ player_id: currentPlayerId, match_id: matchId, home_pred: parseInt(h), away_pred: parseInt(a) }, { onConflict: 'player_id, match_id' });
+            if (!error) {
+                const btn = event.target;
+                btn.innerText = 'Saved! ✓'; btn.className = 'w-full bg-green-500 text-white font-semibold py-3 rounded-lg transition-colors';
+                setTimeout(() => { btn.innerText = 'Update Prediction'; btn.className = 'w-full bg-blue-50 text-blue-700 font-semibold py-3 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white'; }, 2000);
+            }
+        }
+
+        // --- TOURNAMENT LOGIC (MIT FLAGGEN) ---
         async function fetchTournamentGroups() {
-        const { data: standings, error } = await supabaseClient.from('group_standings').select('*');
-        if (error || !standings || standings.length === 0) return;
+            const { data: standings, error } = await supabaseClient.from('group_standings').select('*');
+            if (error || !standings || standings.length === 0) return;
 
-        const groups = {};
-        standings.forEach(team => {
-            if (!groups[team.group_id]) groups[team.group_id] = [];
-            groups[team.group_id].push(team);
-        });
-
-        const container = document.getElementById('tournament-groups');
-        container.innerHTML = '';
-
-        Object.keys(groups).sort().forEach(groupId => {
-            const teams = groups[groupId].sort((a, b) => {
-                if (b.points !== a.points) return b.points - a.points;
-                const gdA = a.goals_for - a.goals_against;
-                const gdB = b.goals_for - b.goals_against;
-                if (gdB !== gdA) return gdB - gdA;
-                return b.goals_for - a.goals_for;
+            const groups = {};
+            standings.forEach(team => {
+                if (!groups[team.group_id]) groups[team.group_id] = [];
+                groups[team.group_id].push(team);
             });
 
-            let rowsHtml = '';
-            teams.forEach((t, i) => {
-                const gd = t.goals_for - t.goals_against;
-                const gdDisplay = gd > 0 ? `+${gd}` : gd;
-                const rankClass = i < 2 ? 'border-l-4 border-green-500' : (i === 2 ? 'border-l-4 border-yellow-400' : 'border-l-4 border-transparent');
-                
-                // Flaggen HTML für die Tabelle
-                const teamFlag = t.crest ? `<img src="${t.crest}" class="w-5 h-5 inline-block mr-2 object-contain">` : '';
+            const container = document.getElementById('tournament-groups');
+            container.innerHTML = '';
 
-                rowsHtml += `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100 bg-white">
-                        <td class="${rankClass} p-2 text-center text-slate-400 font-bold text-xs">${i+1}</td>
-                        <td class="p-2 font-bold text-slate-800 flex items-center">${teamFlag}${t.team_name}</td>
-                        <td class="p-2 text-center text-slate-500">${t.played}</td>
-                        <td class="p-2 text-center text-slate-500">${t.goals_for}:${t.goals_against}</td>
-                        <td class="p-2 text-center text-slate-500">${gdDisplay}</td>
-                        <td class="p-2 text-center font-black text-blue-700">${t.points}</td>
-                    </tr>
+            Object.keys(groups).sort().forEach(groupId => {
+                const teams = groups[groupId].sort((a, b) => {
+                    if (b.points !== a.points) return b.points - a.points;
+                    const gdA = a.goals_for - a.goals_against;
+                    const gdB = b.goals_for - b.goals_against;
+                    if (gdB !== gdA) return gdB - gdA;
+                    return b.goals_for - a.goals_for;
+                });
+
+                let rowsHtml = '';
+                teams.forEach((t, i) => {
+                    const gd = t.goals_for - t.goals_against;
+                    const gdDisplay = gd > 0 ? `+${gd}` : gd;
+                    const rankClass = i < 2 ? 'border-l-4 border-green-500' : (i === 2 ? 'border-l-4 border-yellow-400' : 'border-l-4 border-transparent');
+                    
+                    // Flaggen HTML für die Tabelle
+                    const teamFlag = t.crest ? `<img src="${t.crest}" class="w-5 h-5 inline-block mr-2 object-contain">` : '';
+
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 bg-white">
+                            <td class="${rankClass} p-2 text-center text-slate-400 font-bold text-xs">${i+1}</td>
+                            <td class="p-2 font-bold text-slate-800 flex items-center">${teamFlag}${t.team_name}</td>
+                            <td class="p-2 text-center text-slate-500">${t.played}</td>
+                            <td class="p-2 text-center text-slate-500">${t.goals_for}:${t.goals_against}</td>
+                            <td class="p-2 text-center text-slate-500">${gdDisplay}</td>
+                            <td class="p-2 text-center font-black text-blue-700">${t.points}</td>
+                        </tr>
+                    `;
+                });
+
+                container.innerHTML += `
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-6">
+                        <div class="bg-slate-100 p-3 border-b border-slate-200 font-black text-slate-700 flex justify-between items-center">
+                            <span>Group ${groupId}</span>
+                            <span class="text-xs font-normal text-slate-500">P = Played, Pts = Points</span>
+                        </div>
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
+                                    <th class="p-2 text-center w-8">#</th>
+                                    <th class="p-2">Team</th>
+                                    <th class="p-2 text-center" title="Played">P</th>
+                                    <th class="p-2 text-center" title="Goals">Goals</th>
+                                    <th class="p-2 text-center" title="Goal Difference">GD</th>
+                                    <th class="p-2 text-center" title="Points">Pts</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
                 `;
             });
-
-            container.innerHTML += `
-                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-6">
-                    <div class="bg-slate-100 p-3 border-b border-slate-200 font-black text-slate-700 flex justify-between items-center">
-                        <span>Group ${groupId}</span>
-                        <span class="text-xs font-normal text-slate-500">P = Played, Pts = Points</span>
-                    </div>
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
-                                <th class="p-2 text-center w-8">#</th>
-                                <th class="p-2">Team</th>
-                                <th class="p-2 text-center" title="Played">P</th>
-                                <th class="p-2 text-center" title="Goals">Goals</th>
-                                <th class="p-2 text-center" title="Goal Difference">GD</th>
-                                <th class="p-2 text-center" title="Points">Pts</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsHtml}</tbody>
-                    </table>
-                </div>
-            `;
-        });
-    }
-
-
-            container.innerHTML += `
-                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-6">
-                    <div class="bg-slate-100 p-3 border-b border-slate-200 font-black text-slate-700 flex justify-between items-center">
-                        <span>Group ${groupId}</span>
-                        <span class="text-xs font-normal text-slate-500">P = Played, Pts = Points</span>
-                    </div>
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
-                                <th class="p-2 text-center w-8">#</th>
-                                <th class="p-2">Team</th>
-                                <th class="p-2 text-center" title="Played">P</th>
-                                <th class="p-2 text-center" title="Goals">Goals</th>
-                                <th class="p-2 text-center" title="Goal Difference">GD</th>
-                                <th class="p-2 text-center" title="Points">Pts</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsHtml}</tbody>
-                    </table>
-                </div>
-            `;
-        });
-    }
-
-    // --- TAB SWITCHING & LEADERBOARD LOGIK ---
-    function switchTab(t) {
-        ['matches','tournament','leaderboard','info'].forEach(id => {
-            document.getElementById(`view-${id}`).classList.add('hidden');
-            document.getElementById(`tab-${id}`).classList.remove('text-blue-700', 'border-blue-700');
-            document.getElementById(`tab-${id}`).classList.add('text-slate-500', 'border-transparent');
-        });
-        document.getElementById(`view-${t}`).classList.remove('hidden');
-        document.getElementById(`tab-${t}`).classList.remove('text-slate-500', 'border-transparent');
-        document.getElementById(`tab-${t}`).classList.add('text-blue-700', 'border-blue-700');
-        
-        if (t === 'leaderboard') fetchLeaderboard(); 
-        if (t === 'tournament') fetchTournamentGroups(); // <--- NEU: Lädt Tabellen, wenn man auf Tournament klickt
-    }
-
-    function setTournamentMode(m) {
-        ['groups','bracket'].forEach(id => {
-            document.getElementById(`tournament-${id}`).classList[m===id ? 'remove' : 'add']('hidden');
-            document.getElementById(`btn-${id}`).className = m===id ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
-        });
-    }
-
-    let allPlayersCached = [];
-    let currentLeaderboardMode = 'top50'; 
-
-    async function fetchLeaderboard() {
-        const { data } = await supabaseClient.from('players').select('id, nickname, score').order('score', { ascending: false }).limit(2000); 
-        if(data) { allPlayersCached = data; updatePersonalRankDisplay(); renderCurrentLeaderboardView(); }
-    }
-
-    function updatePersonalRankDisplay() {
-        const idx = allPlayersCached.findIndex(p => p.id === currentPlayerId);
-        if (idx !== -1) {
-            document.getElementById('my-rank-display').textContent = idx + 1; 
-            document.getElementById('my-score-display').textContent = allPlayersCached[idx].score;
         }
-    }
 
-    function setLeaderboardMode(m) {
-        currentLeaderboardMode = m;
-        document.getElementById('btn-top50').className = m==='top50' ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
-        document.getElementById('btn-around').className = m==='around' ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
-        renderCurrentLeaderboardView();
-    }
+        // --- TAB SWITCHING & LEADERBOARD LOGIK ---
+        function switchTab(t) {
+            ['matches','tournament','leaderboard','info'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+                document.getElementById(`tab-${id}`).classList.remove('text-blue-700', 'border-blue-700');
+                document.getElementById(`tab-${id}`).classList.add('text-slate-500', 'border-transparent');
+            });
+            document.getElementById(`view-${t}`).classList.remove('hidden');
+            document.getElementById(`tab-${t}`).classList.remove('text-slate-500', 'border-transparent');
+            document.getElementById(`tab-${t}`).classList.add('text-blue-700', 'border-blue-700');
+            
+            if (t === 'leaderboard') fetchLeaderboard(); 
+            if (t === 'tournament') fetchTournamentGroups(); 
+        }
 
-    function renderCurrentLeaderboardView() {
-        const pc = document.getElementById('podium-container');
-        let list = [], start = 0;
-        if (currentLeaderboardMode === 'top50') {
-            if(allPlayersCached.length >= 3) {
-                pc.innerHTML = `<div class="flex flex-col items-center w-28"><span class="text-xs font-bold text-slate-600 mb-1 truncate w-full text-center px-1">${allPlayersCached[1].nickname}</span><div class="w-full h-24 bg-slate-200 border-t-4 border-slate-400 rounded-t-xl flex justify-center items-start pt-3 font-black text-3xl text-slate-400">2</div></div>
-                                <div class="flex flex-col items-center w-32 z-10 -mx-2"><span class="text-sm font-black text-amber-600 mb-1 truncate w-full text-center px-1">${allPlayersCached[0].nickname}</span><div class="w-full h-32 bg-amber-100 border-t-4 border-amber-400 rounded-t-xl flex justify-center items-start pt-3 font-black text-4xl text-amber-500 shadow-lg">1</div></div>
-                                <div class="flex flex-col items-center w-28"><span class="text-xs font-bold text-orange-800 mb-1 truncate w-full text-center px-1">${allPlayersCached[2].nickname}</span><div class="w-full h-20 bg-orange-100 border-t-4 border-orange-400 rounded-t-xl flex justify-center items-start pt-2 font-black text-3xl text-orange-400">3</div></div>`;
-                pc.classList.remove('hidden');
-            }
-            list = allPlayersCached.slice(3, 50); start = 3; 
-        } else {
-            pc.classList.add('hidden');
+        function setTournamentMode(m) {
+            ['groups','bracket'].forEach(id => {
+                document.getElementById(`tournament-${id}`).classList[m===id ? 'remove' : 'add']('hidden');
+                document.getElementById(`btn-${id}`).className = m===id ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
+            });
+        }
+
+        let allPlayersCached = [];
+        let currentLeaderboardMode = 'top50'; 
+
+        async function fetchLeaderboard() {
+            const { data } = await supabaseClient.from('players').select('id, nickname, score').order('score', { ascending: false }).limit(2000); 
+            if(data) { allPlayersCached = data; updatePersonalRankDisplay(); renderCurrentLeaderboardView(); }
+        }
+
+        function updatePersonalRankDisplay() {
             const idx = allPlayersCached.findIndex(p => p.id === currentPlayerId);
-            start = Math.max(0, idx - 10);
-            list = allPlayersCached.slice(start, Math.min(allPlayersCached.length, idx + 11));
+            if (idx !== -1) {
+                document.getElementById('my-rank-display').textContent = idx + 1; 
+                document.getElementById('my-score-display').textContent = allPlayersCached[idx].score;
+            }
         }
-        const ll = document.getElementById('leaderboard-list'); ll.innerHTML = '';
-        list.forEach((p, i) => {
-            const tr = document.createElement('tr');
-            tr.className = p.id === currentPlayerId ? 'bg-blue-50 border-l-4 border-blue-600' : 'hover:bg-slate-50 border-l-4 border-transparent';
-            tr.innerHTML = `<td class="p-4 text-slate-400 font-bold text-center">${start + i + 1}</td><td class="p-4 text-slate-800 font-medium">${p.nickname}</td><td class="p-4 text-right text-slate-800 font-black">${p.score}</td>`;
-            ll.appendChild(tr);
-        });
-    }
 
-    authenticateUser();
-</script>
+        function setLeaderboardMode(m) {
+            currentLeaderboardMode = m;
+            document.getElementById('btn-top50').className = m==='top50' ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
+            document.getElementById('btn-around').className = m==='around' ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
+            renderCurrentLeaderboardView();
+        }
 
+        function renderCurrentLeaderboardView() {
+            const pc = document.getElementById('podium-container');
+            let list = [], start = 0;
+            if (currentLeaderboardMode === 'top50') {
+                if(allPlayersCached.length >= 3) {
+                    pc.innerHTML = `<div class="flex flex-col items-center w-28"><span class="text-xs font-bold text-slate-600 mb-1 truncate w-full text-center px-1">${allPlayersCached[1].nickname}</span><div class="w-full h-24 bg-slate-200 border-t-4 border-slate-400 rounded-t-xl flex justify-center items-start pt-3 font-black text-3xl text-slate-400 shadow-inner">2</div></div>
+                                    <div class="flex flex-col items-center w-32 z-10 -mx-2"><span class="text-sm font-black text-amber-600 mb-1 truncate w-full text-center px-1">${allPlayersCached[0].nickname}</span><div class="w-full h-32 bg-amber-100 border-t-4 border-amber-400 rounded-t-xl flex justify-center items-start pt-3 font-black text-4xl text-amber-500 shadow-lg">1</div></div>
+                                    <div class="flex flex-col items-center w-28"><span class="text-xs font-bold text-orange-800 mb-1 truncate w-full text-center px-1">${allPlayersCached[2].nickname}</span><div class="w-full h-20 bg-orange-100 border-t-4 border-orange-400 rounded-t-xl flex justify-center items-start pt-2 font-black text-3xl text-orange-400 shadow-inner">3</div></div>`;
+                    pc.classList.remove('hidden');
+                }
+                list = allPlayersCached.slice(3, 50); start = 3; 
+            } else {
+                pc.classList.add('hidden');
+                const idx = allPlayersCached.findIndex(p => p.id === currentPlayerId);
+                start = Math.max(0, idx - 10);
+                list = allPlayersCached.slice(start, Math.min(allPlayersCached.length, idx + 11));
+            }
+            const ll = document.getElementById('leaderboard-list'); ll.innerHTML = '';
+            list.forEach((p, i) => {
+                const tr = document.createElement('tr');
+                tr.className = p.id === currentPlayerId ? 'bg-blue-50 border-l-4 border-blue-600' : 'hover:bg-slate-50 border-l-4 border-transparent';
+                tr.innerHTML = `<td class="p-4 text-slate-400 font-bold text-center">${start + i + 1}</td><td class="p-4 text-slate-800 font-medium">${p.nickname}</td><td class="p-4 text-right text-slate-800 font-black">${p.score}</td>`;
+                ll.appendChild(tr);
+            });
+        }
+
+        authenticateUser();
+    </script>
 </body>
 </html>
