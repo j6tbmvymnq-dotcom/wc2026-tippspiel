@@ -121,4 +121,29 @@ async function runUpdate() {
     }
 }
 
-runUpdate();
+// ... dein bisheriger Code von runUpdate() bleibt unangetastet ...
+
+// Hilfsfunktion: Lässt das Skript für X Millisekunden pausieren
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function startLoop() {
+    const cycles = 4; // Wie oft soll das Skript innerhalb der Action laufen?
+    const waitTime = 60 * 1000; // 60 Sekunden in Millisekunden
+
+    for (let i = 1; i <= cycles; i++) {
+        console.log(`\n=== Starte Durchlauf ${i} von ${cycles} ===`);
+        
+        await runUpdate(); // Führt dein normales Update aus
+
+        // Wenn es nicht der letzte Durchlauf ist, warte 1 Minute
+        if (i < cycles) {
+            console.log(`Warte 60 Sekunden bis zum nächsten Abruf...`);
+            await delay(waitTime);
+        }
+    }
+    console.log("\n✅ Alle Durchläufe für diese Action-Runde beendet.");
+}
+
+// Startet die Schleife
+startLoop();
+
