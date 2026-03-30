@@ -1,0 +1,29 @@
+name: WM 2026 Live Updater
+
+on:
+  schedule:
+    # Läuft alle 1 Minute (verhindert API-Banns, ist aber aktuell genug)
+    - cron: '*/1 * * * *'
+  workflow_dispatch: # Erlaubt es dir, das Skript manuell auf GitHub per Knopfdruck zu starten
+
+jobs:
+  update-database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v3
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Supabase-Client installieren
+        run: npm install @supabase/supabase-js
+
+      - name: Update-Skript ausführen
+        run: node updater.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
