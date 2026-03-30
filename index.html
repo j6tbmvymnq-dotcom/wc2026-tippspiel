@@ -24,7 +24,6 @@
         
         <header class="bg-stone-900 text-stone-200 p-6 shadow-md border-b border-stone-800 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-green-900 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
-            
             <h1 class="text-3xl font-black tracking-tighter mb-1 text-stone-100">OPERATION: <span class="text-green-600">WC '26</span></h1>
             <p class="text-stone-500 text-xs tracking-widest uppercase font-bold">Company Prediction Network</p>
             <div class="mt-6 flex justify-between items-end relative z-10">
@@ -99,23 +98,17 @@
 
             <div id="view-info" class="hidden space-y-6">
                 <div class="bg-stone-900 border border-stone-800 rounded-xl p-6 shadow-md">
-                    <h2 class="text-lg font-black text-stone-100 mb-4 border-b border-stone-800 pb-2 uppercase tracking-wider flex items-center gap-2">
-                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Protocol Rules
-                    </h2>
+                    <h2 class="text-lg font-black text-stone-100 mb-4 border-b border-stone-800 pb-2 uppercase tracking-wider flex items-center gap-2">Protocol Rules</h2>
                     <ul class="list-disc pl-5 space-y-3 text-stone-400 text-sm">
                         <li>Participation in this prediction game is strictly voluntary.</li>
                         <li>Each operative is only allowed one single account.</li>
-                        <li><strong>Match Deadlines:</strong> All predictions must be submitted before the official kickoff. Late entries will be rejected by the system.</li>
-                        <li><strong>Bonus Deadlines:</strong> Bonus parameters must be locked in before the official start of the World Cup.</li>
+                        <li><strong>Match Deadlines:</strong> All predictions must be submitted before the official kickoff. Late entries will be rejected.</li>
+                        <li><strong>Bonus Deadlines:</strong> Bonus parameters must be locked in before the official start.</li>
                         <li><strong>Regular Time Only:</strong> Predictions apply exclusively to regular playing time (90m + stoppage). Extra time and penalties are ignored.</li>
                     </ul>
                 </div>
                 <div class="bg-stone-900 border border-stone-800 rounded-xl p-6 shadow-md">
-                    <h2 class="text-lg font-black text-stone-100 mb-4 border-b border-stone-800 pb-2 uppercase tracking-wider flex items-center gap-2">
-                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Scoring System
-                    </h2>
+                    <h2 class="text-lg font-black text-stone-100 mb-4 border-b border-stone-800 pb-2 uppercase tracking-wider flex items-center gap-2">Scoring System</h2>
                     <h3 class="font-bold text-stone-300 mb-2 uppercase text-xs tracking-widest">Matches</h3>
                     <div class="bg-stone-950 p-4 rounded-lg border border-stone-800 mb-5 text-sm text-stone-400 shadow-inner">
                         <p class="mb-2 flex items-center"><span class="font-black text-green-500 text-lg w-12">3 pts</span> <span><strong>Exact Result</strong> (e.g., predicted 2:1, actual 2:1)</span></p>
@@ -124,11 +117,11 @@
                     <h3 class="font-bold text-stone-300 mb-2 uppercase text-xs tracking-widest">Bonus Intel (BQ)</h3>
                     <div class="bg-stone-950 p-4 rounded-lg border border-stone-800 text-sm text-stone-400 space-y-3 shadow-inner">
                         <p><strong>BQ 1 <span class="text-green-600">(10 pts)</span>:</strong> Correct World Cup Winner</p>
-                        <p><strong>BQ 2 <span class="text-green-600">(2 pts)</span>:</strong> Top 20 nation eliminated in the group stage</p>
-                        <p><strong>BQ 3 <span class="text-green-600">(2 pts)</span>:</strong> Nation achieving the highest victory (goal difference)</p>
-                        <p><strong>BQ 4 <span class="text-green-600">(2 pts)</span>:</strong> Group with the most exciting table (lowest point diff)</p>
-                        <p><strong>BQ 5 <span class="text-green-600">(5 pts)</span>:</strong> Number of matches ending with a 0:0 clean sheet</p>
-                        <p><strong>BQ 6 <span class="text-green-600">(5 pts)</span>:</strong> Number of group winners eliminated in the Round of 32</p>
+                        <p><strong>BQ 2 <span class="text-green-600">(2 pts)</span>:</strong> Top 20 nation eliminated in group stage</p>
+                        <p><strong>BQ 3 <span class="text-green-600">(2 pts)</span>:</strong> Nation achieving the highest victory</p>
+                        <p><strong>BQ 4 <span class="text-green-600">(2 pts)</span>:</strong> Group with most exciting table</p>
+                        <p><strong>BQ 5 <span class="text-green-600">(5 pts)</span>:</strong> Number of clean sheet matches (0:0)</p>
+                        <p><strong>BQ 6 <span class="text-green-600">(5 pts)</span>:</strong> Group winners eliminated in Round of 32</p>
                     </div>
                 </div>
             </div>
@@ -168,16 +161,14 @@
 
     <script>
         // --- 1. CONFIGURATION ---
-        const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co'; // <-- DEINE URL
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; // <-- DEIN KEY
+        const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co'; 
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; 
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- 2. STATE & ELEMENTS ---
         let currentPlayerId = null;
         let currentMatches = [];
         let currentPredictions = [];
 
-        // --- 3. AUTH & STARTUP LOGIC ---
         async function authenticateUser() {
             const urlParams = new URLSearchParams(window.location.search);
             const secretKey = urlParams.get('key');
@@ -197,7 +188,6 @@
             checkAndShowAnnouncement();
         }
 
-        // --- ANNOUNCEMENT LOGIC ---
         async function checkAndShowAnnouncement() {
             const { data, error } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
             if (data && data.show_announcement && data.announcement_text) {
@@ -214,7 +204,6 @@
             checkAndShowBonusQuestions();
         }
 
-        // --- BONUS QUESTIONS LOGIC ---
         const OPENING_MATCH_DATE = new Date('2026-06-11T19:00:00Z');
         const ALL_NATIONS = ["Argentina", "Belgium", "Brazil", "Canada", "Colombia", "Croatia", "Denmark", "England", "France", "Germany", "Italy", "Japan", "Morocco", "Mexico", "Netherlands", "Portugal", "Senegal", "South Korea", "Spain", "Switzerland", "Uruguay", "USA", "Wales"].sort();
         const TOP_20_NATIONS = ["Spain", "France", "Argentina", "England", "Portugal", "Netherlands", "Brazil", "Morocco", "Belgium", "Germany", "Croatia", "Italy", "Colombia", "Senegal", "Mexico", "USA", "Uruguay", "Japan", "Switzerland", "Denmark"].sort();
@@ -226,7 +215,7 @@
             { id: 'bq1', text: 'BQ 1: Which nation will win the World Cup?', options: ALL_NATIONS },
             { id: 'bq2', text: 'BQ 2: Which Top 20 nation will be eliminated in the group stage?', options: TOP_20_NATIONS },
             { id: 'bq3', text: 'BQ 3: Which nation will achieve the highest victory (goal diff)?', options: ALL_NATIONS },
-            { id: 'bq4', text: 'BQ 4: Which group will have the most exciting table (lowest point diff)?', options: GROUPS_A_L },
+            { id: 'bq4', text: 'BQ 4: Which group will have the most exciting table?', options: GROUPS_A_L },
             { id: 'bq5', text: 'BQ 5: How many matches will end with a 0:0 clean sheet?', options: NUM_0_TO_104 },
             { id: 'bq6', text: 'BQ 6: How many group winners will be eliminated in the Round of 32?', options: NUM_0_TO_12 }
         ];
@@ -252,7 +241,7 @@
                 q.options.forEach(opt => { optionsHtml += `<option value="${opt.toUpperCase()}">${opt}</option>`; });
                 const div = document.createElement('div');
                 div.className = 'bg-stone-950 border border-stone-800 p-4 rounded-xl shadow-inner';
-                div.innerHTML = `<label class="block text-sm font-bold text-stone-300 mb-2 uppercase tracking-wide">${q.text}</label><select id="answer-${q.id}" class="w-full border border-stone-700 p-3 rounded-lg focus:border-green-600 bg-stone-900 cursor-pointer font-medium text-stone-200 outline-none">${optionsHtml}</select>`;
+                div.innerHTML = `<label class="block text-sm font-bold text-stone-300 mb-2 uppercase tracking-wide">${q.text}</label><select id="answer-${q.id}" class="w-full border border-stone-700 p-3 rounded-lg focus:border-green-600 bg-stone-900 cursor-pointer font-medium text-stone-200 outline-none px-2" style="text-align-last: center;">${optionsHtml}</select>`;
                 container.appendChild(div);
             });
         }
@@ -271,9 +260,11 @@
             checkAndShowBonusQuestions(); 
         }
 
-        // --- MATCHES LOGIC (MIT SCROLL FIX & DARK MODE) ---
+        // --- MATCHES LOGIC (MIT TOP-FILTER & ZENTRIERTEN DROPDOWNS) ---
+        let matchFilterMode = 'date'; // 'date', 'group', 'ko'
         let activeDate = null; 
-        let isFirstLoad = true; 
+        let activeGroup = 'A';
+        let activeStage = null;
 
         async function fetchMatchesAndPredictions() {
             const { data: matches } = await supabaseClient.from('matches').select('*').order('kickoff', { ascending: true });
@@ -283,16 +274,33 @@
             renderMatches();
         }
 
+        function setMatchFilterMode(mode) {
+            matchFilterMode = mode;
+            renderMatches();
+        }
+
         function generateScoreOptions(val) {
             let opts = '<option value="" disabled selected>-</option>';
             for(let i=0; i<=15; i++) opts += `<option value="${i}" ${val!=='' && parseInt(val)===i ? 'selected' : ''}>${i}</option>`;
             return opts;
         }
 
+        function formatStageName(apiStage) {
+            const map = {
+                'LAST_32': 'Round of 32',
+                'LAST_16': 'Round of 16',
+                'QUARTER_FINALS': 'Quarter-Finals',
+                'SEMI_FINALS': 'Semi-Finals',
+                'THIRD_PLACE': '3rd Place',
+                'FINAL': 'Final'
+            };
+            return map[apiStage] || apiStage.replace('_', ' ');
+        }
+
         function renderMatches() {
             const vm = document.getElementById('view-matches');
             let oldScrollPosition = 0;
-            const existingBar = document.getElementById('date-filter-bar');
+            const existingBar = document.getElementById('sub-filter-bar');
             if (existingBar) oldScrollPosition = existingBar.scrollLeft;
 
             vm.innerHTML = ''; 
@@ -302,58 +310,89 @@
                 return;
             }
 
-            const datesMap = new Set();
-            currentMatches.forEach(m => {
-                const d = new Date(m.kickoff);
-                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                datesMap.add(dateStr);
-            });
-            const dates = Array.from(datesMap).sort();
+            // 1. Taktischer Haupt-Filter (Date | Groups | Knockout)
+            const mainFilter = document.createElement('div');
+            mainFilter.className = 'flex justify-center mb-4 bg-stone-900 border border-stone-800 rounded-lg p-1 shadow-inner';
+            mainFilter.innerHTML = `
+                <button onclick="setMatchFilterMode('date')" class="${matchFilterMode === 'date' ? 'bg-stone-800 text-green-500 shadow-md' : 'text-stone-500 hover:text-stone-300'} w-1/3 py-2 rounded-md font-bold text-xs uppercase tracking-wider transition-all">Dates</button>
+                <button onclick="setMatchFilterMode('group')" class="${matchFilterMode === 'group' ? 'bg-stone-800 text-green-500 shadow-md' : 'text-stone-500 hover:text-stone-300'} w-1/3 py-2 rounded-md font-bold text-xs uppercase tracking-wider transition-all">Groups</button>
+                <button onclick="setMatchFilterMode('ko')" class="${matchFilterMode === 'ko' ? 'bg-stone-800 text-green-500 shadow-md' : 'text-stone-500 hover:text-stone-300'} w-1/3 py-2 rounded-md font-bold text-xs uppercase tracking-wider transition-all">K.O.</button>
+            `;
+            vm.appendChild(mainFilter);
 
-            if (!activeDate || !dates.includes(activeDate)) {
-                const today = new Date();
-                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                activeDate = dates.includes(todayStr) ? todayStr : dates[0];
+            // 2. Sub-Filter Bar generieren
+            const subFilterContainer = document.createElement('div');
+            subFilterContainer.id = 'sub-filter-bar'; 
+            subFilterContainer.style.scrollbarWidth = 'none'; 
+            subFilterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-stone-800 snap-x';
+            
+            let filteredMatches = [];
+
+            if (matchFilterMode === 'date') {
+                const datesMap = new Set();
+                currentMatches.forEach(m => {
+                    const d = new Date(m.kickoff);
+                    datesMap.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                });
+                const dates = Array.from(datesMap).sort();
+                if (!activeDate || !dates.includes(activeDate)) activeDate = dates[0];
+
+                dates.forEach(dateStr => {
+                    const dObj = new Date(dateStr.split('-')[0], dateStr.split('-')[1]-1, dateStr.split('-')[2]);
+                    const isActive = dateStr === activeDate;
+                    const btn = document.createElement('button');
+                    btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`;
+                    btn.onclick = () => { activeDate = dateStr; renderMatches(); };
+                    btn.innerHTML = `<span class="text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-green-300' : 'text-stone-500'}">${dObj.toLocaleDateString('en-US', { weekday: 'short' })}</span><span class="text-sm font-black">${dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`;
+                    subFilterContainer.appendChild(btn);
+                });
+
+                filteredMatches = currentMatches.filter(m => {
+                    const d = new Date(m.kickoff);
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === activeDate;
+                });
+
+            } else if (matchFilterMode === 'group') {
+                const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+                groups.forEach(g => {
+                    const isActive = g === activeGroup;
+                    const btn = document.createElement('button');
+                    btn.className = `snap-center flex-shrink-0 px-5 py-3 rounded-xl border transition-all font-black text-sm uppercase tracking-widest ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800'}`;
+                    btn.onclick = () => { activeGroup = g; renderMatches(); };
+                    btn.innerText = `Grp ${g}`;
+                    subFilterContainer.appendChild(btn);
+                });
+
+                filteredMatches = currentMatches.filter(m => m.match_group === activeGroup);
+
+            } else if (matchFilterMode === 'ko') {
+                const koStages = [...new Set(currentMatches.map(m => m.stage))].filter(s => s && s !== 'GROUP_STAGE' && s !== 'TBD');
+                if (koStages.length === 0) {
+                    subFilterContainer.innerHTML = '<span class="text-stone-500 text-xs py-3 w-full text-center uppercase tracking-widest">No K.O. Matches scheduled yet</span>';
+                } else {
+                    if (!activeStage || !koStages.includes(activeStage)) activeStage = koStages[0];
+                    koStages.forEach(s => {
+                        const isActive = s === activeStage;
+                        const btn = document.createElement('button');
+                        btn.className = `snap-center flex-shrink-0 px-5 py-3 rounded-xl border transition-all font-black text-sm uppercase tracking-widest ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800'}`;
+                        btn.onclick = () => { activeStage = s; renderMatches(); };
+                        btn.innerText = formatStageName(s);
+                        subFilterContainer.appendChild(btn);
+                    });
+                    filteredMatches = currentMatches.filter(m => m.stage === activeStage);
+                }
             }
-
-            const filterContainer = document.createElement('div');
-            filterContainer.id = 'date-filter-bar'; 
-            filterContainer.style.scrollbarWidth = 'none'; 
-            filterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-stone-800 snap-x';
             
-            dates.forEach(dateStr => {
-                const [year, month, day] = dateStr.split('-');
-                const dateObj = new Date(year, month - 1, day);
-                const shortDay = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); 
-                const shortDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
-                const isActive = dateStr === activeDate;
-                
-                const btn = document.createElement('button');
-                btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-green-800 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`;
-                
-                btn.onclick = () => {
-                    activeDate = dateStr;
-                    isFirstLoad = false; 
-                    renderMatches(); 
-                };
-                
-                btn.innerHTML = `
-                    <span class="text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-green-300' : 'text-stone-500'}">${shortDay}</span>
-                    <span class="text-sm font-black">${shortDate}</span>
-                `;
-                filterContainer.appendChild(btn);
-            });
-            
-            vm.appendChild(filterContainer);
-            filterContainer.scrollLeft = oldScrollPosition;
+            vm.appendChild(subFilterContainer);
+            subFilterContainer.scrollLeft = oldScrollPosition;
 
+            // 3. Spiele rendern (mit zentrierten Dropdowns!)
             const listContainer = document.createElement('div');
             listContainer.className = 'space-y-4';
             
-            const filteredMatches = currentMatches.filter(m => {
-                const d = new Date(m.kickoff);
-                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === activeDate;
-            });
+            if(filteredMatches.length === 0) {
+                 listContainer.innerHTML = '<p class="text-stone-600 text-center text-sm font-mono mt-8">No matches found in this sector.</p>';
+            }
 
             filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
@@ -363,11 +402,10 @@
 
                 const card = document.createElement('div');
                 card.className = 'bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden';
-                
-                // Kleine optische Spielerei: Roter/Grüner Balken an der Seite, wenn schon getippt
                 const tipStatusStyle = pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700';
                 card.classList.add(...tipStatusStyle.split(' '));
 
+                // HIER IST DER FIX FÜR DIE DROPDOWNS: px-0 und style="text-align-last: center;"
                 card.innerHTML = `
                     <div class="text-[10px] text-stone-500 mb-3 text-center border-b border-stone-800 pb-2 uppercase tracking-widest font-bold">
                         <span class="text-stone-300">${matchTime}</span> • ${match.venue || 'LOCATION TBD'}
@@ -378,9 +416,9 @@
                             ${homeFlag}
                         </div>
                         <div class="w-[30%] flex justify-center items-center gap-1">
-                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none" style="text-align-last: center;">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
                             <span class="font-black text-stone-600 mx-0.5">:</span>
-                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none" style="text-align-last: center;">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
                         </div>
                         <div class="w-[35%] flex items-center justify-start gap-2 pl-1">
                             ${awayFlag}
@@ -397,7 +435,7 @@
             vm.appendChild(listContainer);
 
             setTimeout(() => {
-                const activeBtn = filterContainer.querySelector('.bg-green-800');
+                const activeBtn = subFilterContainer.querySelector('.bg-green-900');
                 if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }, 10);
         }
@@ -414,7 +452,7 @@
             }
         }
 
-        // --- TOURNAMENT LOGIC (FESTES TABELLEN-LAYOUT) ---
+        // --- TOURNAMENT LOGIC ---
         async function fetchTournamentGroups() {
             const { data: standings, error } = await supabaseClient.from('group_standings').select('*');
             if (error || !standings || standings.length === 0) return;
@@ -447,14 +485,12 @@
                     rowsHtml += `
                         <tr class="hover:bg-stone-800/50 border-b border-stone-800 bg-stone-900 transition-colors">
                             <td class="${rankClass} p-2 text-center text-stone-500 font-black text-xs">${i+1}</td>
-                            
                             <td class="p-2 font-bold text-stone-200">
                                 <div class="flex items-center w-full overflow-hidden">
                                     ${teamFlag}
                                     <span class="truncate" title="${t.team_name}">${t.team_name}</span>
                                 </div>
                             </td>
-                            
                             <td class="p-2 text-center text-stone-400 font-mono">${t.played}</td>
                             <td class="p-2 text-center text-stone-400 font-mono">${t.goals_for}:${t.goals_against}</td>
                             <td class="p-2 text-center text-stone-400 font-mono">${gdDisplay}</td>
@@ -463,7 +499,6 @@
                     `;
                 });
 
-                // NEU: 'table-fixed' in der Klasse der <table> zwingt alle Tabellen ins exakt gleiche Format
                 container.innerHTML += `
                     <div class="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden shadow-md mb-6">
                         <div class="bg-stone-950 p-3 border-b border-stone-800 font-black text-stone-300 flex justify-between items-center uppercase tracking-widest text-sm">
