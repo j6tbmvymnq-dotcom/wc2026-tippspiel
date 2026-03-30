@@ -288,14 +288,28 @@
             return opts;
         }
 
-                        // --- MATCHES LOGIC (MIT TAGES-FILTER & SCROLL-FIX) ---
+                                // --- MATCHES LOGIC (MIT TAGES-FILTER, SCROLL-FIX & STAGES) ---
         let activeDate = null; 
-        let isFirstLoad = true; // Merkt sich, ob die App gerade erst geöffnet wurde
+        let isFirstLoad = true;
+
+        // Hilfsfunktion: Macht aus API-Code schönes Englisch
+        function formatStage(stageCode) {
+            if (!stageCode || stageCode === 'TBD') return '';
+            const stageMap = {
+                'GROUP_STAGE': 'Group Stage',
+                'LAST_32': 'Round of 32',
+                'LAST_16': 'Round of 16',
+                'QUARTER_FINALS': 'Quarter-Finals',
+                'SEMI_FINALS': 'Semi-Finals',
+                'THIRD_PLACE': 'Third Place Play-off',
+                'FINAL': 'Final'
+            };
+            return stageMap[stageCode] || stageCode.replace(/_/g, ' ');
+        }
 
         function renderMatches() {
             const vm = document.getElementById('view-matches');
             
-            // FIX: Bevor wir alles löschen, merken wir uns die genaue Scroll-Position der Leiste!
             let oldScrollPosition = 0;
             const existingBar = document.getElementById('date-filter-bar');
             if (existingBar) {
@@ -309,7 +323,6 @@
                 return;
             }
 
-            // 1. Alle einzigartigen lokalen Datums-Strings ermitteln (Format: YYYY-MM-DD)
             const datesMap = new Set();
             currentMatches.forEach(m => {
                 const d = new Date(m.kickoff);
@@ -318,23 +331,20 @@
             });
             const dates = Array.from(datesMap).sort();
 
-            // 2. Standardmäßig den ersten Spieltag (oder heute) auswählen
             if (!activeDate || !dates.includes(activeDate)) {
                 const today = new Date();
                 const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                 activeDate = dates.includes(todayStr) ? todayStr : dates[0];
             }
 
-            // 3. Die horizontal scrollbare Datums-Leiste bauen
             const filterContainer = document.createElement('div');
-            filterContainer.id = 'date-filter-bar'; // WICHTIG: ID für das Scroll-Gedächtnis
+            filterContainer.id = 'date-filter-bar';
             filterContainer.style.scrollbarWidth = 'none'; 
             filterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-slate-200 snap-x';
             
             dates.forEach(dateStr => {
                 const [year, month, day] = dateStr.split('-');
                 const dateObj = new Date(year, month - 1, day);
-                
                 const shortDay = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); 
                 const shortDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
                 
@@ -345,7 +355,7 @@
                 
                 btn.onclick = () => {
                     activeDate = dateStr;
-                    isFirstLoad = false; // Bei Klick ist es kein Erstaufruf mehr
+                    isFirstLoad = false;
                     renderMatches(); 
                 };
                 
@@ -357,11 +367,8 @@
             });
             
             vm.appendChild(filterContainer);
-
-            // FIX: SOFORT die alte Scroll-Position wiederherstellen, BEVOR der Browser den Rest zeichnet
             filterContainer.scrollLeft = oldScrollPosition;
 
-            // 4. Die Spiele-Liste für den ausgewählten Tag bauen
             const listContainer = document.createElement('div');
             listContainer.className = 'space-y-4';
             
@@ -378,11 +385,18 @@
                 const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
                 const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
 
+                // NEU: Das Stage-Badge generieren
+                const stageName = formatStage(match.stage);
+                const stageBadge = stageName ? `<span class="bg-blue-100 text-blue-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2 align-middle">${stageName}</span>` : '';
+
                 const card = document.createElement('div');
                 card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col';
                 card.innerHTML = `
-                    <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide">
-                        <span class="font-bold text-slate-700">${matchTime}</span> • ${match.venue || 'TBD'}
+                    <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide flex justify-center items-center">
+                        <span class="font-bold text-slate-700">${matchTime}</span>
+                        ${stageBadge}
+                        <span class="mx-2">•</span> 
+                        <span class="truncate max-w-[40%]">${match.venue || 'TBD'}</span>
                     </div>
                     <div class="flex items-center justify-between mb-4 mt-1">
                         <div class="w-[35%] flex items-center justify-end gap-2 pr-1">
@@ -408,7 +422,6 @@
             
             vm.appendChild(listContainer);
 
-            // 5. UX-Trick: Sanftes Nachjustieren (Zentrieren)
             setTimeout(() => {
                 const activeBtn = filterContainer.querySelector('.bg-blue-700');
                 if (activeBtn) {
@@ -416,6 +429,7 @@
                 }
             }, 10);
         }
+
 
 
 
