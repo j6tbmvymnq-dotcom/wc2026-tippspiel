@@ -19,16 +19,18 @@ async function runUpdate() {
         if (!matchesResponse.ok) throw new Error(`API Fehler (Matches): ${matchesResponse.status}`);
         const matchesData = await matchesResponse.json();
         
-        for (const match of matchesData.matches) {
+                for (const match of matchesData.matches) {
             const matchId = match.id;
             const homeTeam = match.homeTeam?.name || 'TBD';
             const awayTeam = match.awayTeam?.name || 'TBD';
             const homeScore = match.score?.fullTime?.home ?? null;
             const awayScore = match.score?.fullTime?.away ?? null;
             const venueName = match.venue || 'TBD';
-            
             const homeLogo = match.homeTeam?.crest || '';
             const awayLogo = match.awayTeam?.crest || '';
+            
+            // NEU: Turnierphase aus der API auslesen
+            const matchStage = match.stage || 'TBD';
 
             const { error: matchError } = await supabase.from('matches').upsert({
                 id: matchId,
@@ -40,8 +42,11 @@ async function runUpdate() {
                 away_score: awayScore,
                 venue: venueName,
                 home_logo: homeLogo,
-                away_logo: awayLogo
+                away_logo: awayLogo,
+                stage: matchStage // NEU: In die Datenbank schreiben
             });
+            // ... (Rest bleibt gleich)
+
 
             if (matchError) console.error(`Fehler bei Spiel ${matchId}:`, matchError);
 
