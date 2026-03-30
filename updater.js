@@ -23,12 +23,15 @@ async function runUpdate() {
         if (!matchesResponse.ok) throw new Error(`API Fehler (Matches): ${matchesResponse.status}`);
         const matchesData = await matchesResponse.json();
         
-        for (const match of matchesData.matches) {
+                for (const match of matchesData.matches) {
             const matchId = match.id;
             const homeTeam = match.homeTeam?.name || 'TBD';
             const awayTeam = match.awayTeam?.name || 'TBD';
             const homeScore = match.score?.fullTime?.home ?? null;
             const awayScore = match.score?.fullTime?.away ?? null;
+            
+            // NEU: Das Stadion aus der API auslesen (falls noch nicht bekannt, 'TBD' setzen)
+            const venueName = match.venue || 'TBD';
 
             const { error: matchError } = await supabase.from('matches').upsert({
                 id: matchId,
@@ -37,8 +40,10 @@ async function runUpdate() {
                 kickoff: match.utcDate,
                 status: match.status,
                 home_score: homeScore,
-                away_score: awayScore
+                away_score: awayScore,
+                venue: venueName // NEU: Das Stadion in die Datenbank schreiben
             });
+
 
             if (matchError) console.error(`Fehler bei Spiel ${matchId}:`, matchError);
 
