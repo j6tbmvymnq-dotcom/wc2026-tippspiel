@@ -19,18 +19,20 @@ async function runUpdate() {
         if (!matchesResponse.ok) throw new Error(`API Fehler (Matches): ${matchesResponse.status}`);
         const matchesData = await matchesResponse.json();
         
-                for (const match of matchesData.matches) {
+        for (const match of matchesData.matches) {
             const matchId = match.id;
             const homeTeam = match.homeTeam?.name || 'TBD';
             const awayTeam = match.awayTeam?.name || 'TBD';
             const homeScore = match.score?.fullTime?.home ?? null;
             const awayScore = match.score?.fullTime?.away ?? null;
             const venueName = match.venue || 'TBD';
+            
             const homeLogo = match.homeTeam?.crest || '';
             const awayLogo = match.awayTeam?.crest || '';
             
-            // NEU: Turnierphase aus der API auslesen
+            // NEU: Phase und Gruppe aus der API extrahieren
             const matchStage = match.stage || 'TBD';
+            const matchGroup = match.group ? match.group.replace('GROUP_', '') : 'TBD';
 
             const { error: matchError } = await supabase.from('matches').upsert({
                 id: matchId,
@@ -43,10 +45,9 @@ async function runUpdate() {
                 venue: venueName,
                 home_logo: homeLogo,
                 away_logo: awayLogo,
-                stage: matchStage // NEU: In die Datenbank schreiben
+                stage: matchStage,
+                match_group: matchGroup
             });
-            // ... (Rest bleibt gleich)
-
 
             if (matchError) console.error(`Fehler bei Spiel ${matchId}:`, matchError);
 
@@ -82,10 +83,9 @@ async function runUpdate() {
 
             for (const group of groupStandings) {
                 const groupId = group.group ? group.group.replace('GROUP_', '') : 'TBD';
-                let teamIndex = 1; // Ein Zähler für fehlende Teams
+                let teamIndex = 1; 
                 
                 for (const teamRow of group.table) {
-                    // Sicherheitsnetz: Prüfen, ob team und team.id existieren
                     const tId = teamRow.team?.id ? teamRow.team.id.toString() : `TBD_${groupId}_${teamIndex}`;
                     const tName = teamRow.team?.name || `TBD (Group ${groupId})`;
                     const tCrest = teamRow.team?.crest || '';
@@ -108,15 +108,10 @@ async function runUpdate() {
                 }
             }
             if (standingsToUpsert.length > 0) {
-                const { error: standingsError } = await supabase.from('group_standings').upsert(standingsToUpsert);
-                if (standingsError) console.error("Datenbankfehler bei Tabellen:", standingsError);
+                await supabase.from('group_standings').upsert(standingsToUpsert);
             }
-        } else {
-             console.warn(`API Fehler (Standings): ${standingsResponse.status}`);
         }
-        
         console.log("Update-Job komplett und erfolgreich abgeschlossen!");
-
     } catch (error) {
         console.error("Schwerer Fehler beim Update-Job:", error);
     }
