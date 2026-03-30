@@ -161,8 +161,8 @@
 
     <script>
         // --- 1. CONFIGURATION ---
-        const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co'; 
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; 
+        const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co'; // <-- DEINE URL
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; // <-- DEIN KEY
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentPlayerId = null;
@@ -241,7 +241,7 @@
                 q.options.forEach(opt => { optionsHtml += `<option value="${opt.toUpperCase()}">${opt}</option>`; });
                 const div = document.createElement('div');
                 div.className = 'bg-stone-950 border border-stone-800 p-4 rounded-xl shadow-inner';
-                div.innerHTML = `<label class="block text-sm font-bold text-stone-300 mb-2 uppercase tracking-wide">${q.text}</label><select id="answer-${q.id}" class="w-full border border-stone-700 p-3 rounded-lg focus:border-green-600 bg-stone-900 cursor-pointer font-medium text-stone-200 outline-none px-2" style="text-align-last: center;">${optionsHtml}</select>`;
+                div.innerHTML = `<label class="block text-sm font-bold text-stone-300 mb-2 uppercase tracking-wide">${q.text}</label><select id="answer-${q.id}" class="w-full border border-stone-700 p-3 rounded-lg focus:border-green-600 bg-stone-900 cursor-pointer font-medium text-stone-200 outline-none px-0" style="text-align-last: center;">${optionsHtml}</select>`;
                 container.appendChild(div);
             });
         }
@@ -260,8 +260,8 @@
             checkAndShowBonusQuestions(); 
         }
 
-        // --- MATCHES LOGIC (MIT TOP-FILTER & ZENTRIERTEN DROPDOWNS) ---
-        let matchFilterMode = 'date'; // 'date', 'group', 'ko'
+        // --- MATCHES LOGIC ---
+        let matchFilterMode = 'date'; 
         let activeDate = null; 
         let activeGroup = 'A';
         let activeStage = null;
@@ -297,6 +297,16 @@
             return map[apiStage] || apiStage.replace('_', ' ');
         }
 
+        // Bulletproof Date-Extractor für litauische Zeitzone (Europe/Vilnius)
+        function getVilniusDateStr(isoString) {
+            const d = new Date(isoString);
+            const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Vilnius', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+            const y = parts.find(p => p.type === 'year').value;
+            const m = parts.find(p => p.type === 'month').value;
+            const day = parts.find(p => p.type === 'day').value;
+            return `${y}-${m}-${day}`;
+        }
+
         function renderMatches() {
             const vm = document.getElementById('view-matches');
             let oldScrollPosition = 0;
@@ -310,7 +320,6 @@
                 return;
             }
 
-            // 1. Taktischer Haupt-Filter (Date | Groups | Knockout)
             const mainFilter = document.createElement('div');
             mainFilter.className = 'flex justify-center mb-4 bg-stone-900 border border-stone-800 rounded-lg p-1 shadow-inner';
             mainFilter.innerHTML = `
@@ -320,7 +329,6 @@
             `;
             vm.appendChild(mainFilter);
 
-            // 2. Sub-Filter Bar generieren
             const subFilterContainer = document.createElement('div');
             subFilterContainer.id = 'sub-filter-bar'; 
             subFilterContainer.style.scrollbarWidth = 'none'; 
@@ -331,26 +339,26 @@
             if (matchFilterMode === 'date') {
                 const datesMap = new Set();
                 currentMatches.forEach(m => {
-                    const d = new Date(m.kickoff);
-                    datesMap.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                    datesMap.add(getVilniusDateStr(m.kickoff));
                 });
                 const dates = Array.from(datesMap).sort();
                 if (!activeDate || !dates.includes(activeDate)) activeDate = dates[0];
 
                 dates.forEach(dateStr => {
-                    const dObj = new Date(dateStr.split('-')[0], dateStr.split('-')[1]-1, dateStr.split('-')[2]);
+                    // Datum zur sicheren Anzeige umwandeln (12:00 UTC verhindert Datumsverschiebung)
+                    const btnDate = new Date(`${dateStr}T12:00:00Z`); 
+                    const shortDay = btnDate.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+                    const shortDate = btnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+                    
                     const isActive = dateStr === activeDate;
                     const btn = document.createElement('button');
                     btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`;
                     btn.onclick = () => { activeDate = dateStr; renderMatches(); };
-                    btn.innerHTML = `<span class="text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-green-300' : 'text-stone-500'}">${dObj.toLocaleDateString('en-US', { weekday: 'short' })}</span><span class="text-sm font-black">${dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`;
+                    btn.innerHTML = `<span class="text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-green-300' : 'text-stone-500'}">${shortDay}</span><span class="text-sm font-black">${shortDate}</span>`;
                     subFilterContainer.appendChild(btn);
                 });
 
-                filteredMatches = currentMatches.filter(m => {
-                    const d = new Date(m.kickoff);
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === activeDate;
-                });
+                filteredMatches = currentMatches.filter(m => getVilniusDateStr(m.kickoff) === activeDate);
 
             } else if (matchFilterMode === 'group') {
                 const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -362,7 +370,6 @@
                     btn.innerText = `Grp ${g}`;
                     subFilterContainer.appendChild(btn);
                 });
-
                 filteredMatches = currentMatches.filter(m => m.match_group === activeGroup);
 
             } else if (matchFilterMode === 'ko') {
@@ -386,7 +393,6 @@
             vm.appendChild(subFilterContainer);
             subFilterContainer.scrollLeft = oldScrollPosition;
 
-            // 3. Spiele rendern (mit zentrierten Dropdowns!)
             const listContainer = document.createElement('div');
             listContainer.className = 'space-y-4';
             
@@ -396,7 +402,15 @@
 
             filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
-                const matchTime = new Date(match.kickoff).toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
+                
+                // Litauische Zeitzone (24h Format)
+                const matchTime = new Date(match.kickoff).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: false, 
+                    timeZone: 'Europe/Vilnius' 
+                });
+                
                 const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
                 const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
 
@@ -405,7 +419,6 @@
                 const tipStatusStyle = pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700';
                 card.classList.add(...tipStatusStyle.split(' '));
 
-                // HIER IST DER FIX FÜR DIE DROPDOWNS: px-0 und style="text-align-last: center;"
                 card.innerHTML = `
                     <div class="text-[10px] text-stone-500 mb-3 text-center border-b border-stone-800 pb-2 uppercase tracking-widest font-bold">
                         <span class="text-stone-300">${matchTime}</span> • ${match.venue || 'LOCATION TBD'}
