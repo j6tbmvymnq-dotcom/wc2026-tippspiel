@@ -3,158 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Cup 2026 - Prediction Game</title>
+    <title>World Cup 2026 - Tactical Prediction</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans antialiased">
+<body class="bg-stone-950 text-stone-300 font-sans antialiased selection:bg-green-900 selection:text-white">
 
     <div id="loading-screen" class="flex flex-col items-center justify-center min-h-screen">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-        <p class="text-lg font-semibold text-slate-600">Loading your profile...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+        <p class="text-lg font-semibold text-stone-400 tracking-widest uppercase">Initializing...</p>
     </div>
 
     <div id="error-screen" class="hidden flex-col items-center justify-center min-h-screen p-4 text-center">
-        <svg class="w-16 h-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <h1 class="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
-        <p class="text-slate-600 mb-6">Please use the QR code on your printed ticket to access the game.</p>
+        <svg class="w-16 h-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h1 class="text-2xl font-black text-stone-100 mb-2 uppercase tracking-widest">Access Denied</h1>
+        <p class="text-stone-500 mb-6">Please use the secure QR code on your printed ticket to access the system.</p>
     </div>
 
-    <div id="dashboard" class="hidden max-w-lg mx-auto bg-white min-h-screen shadow-lg relative">
+    <div id="dashboard" class="hidden max-w-lg mx-auto bg-stone-950 min-h-screen shadow-2xl relative border-x border-stone-800">
         
-        <header class="bg-blue-700 text-white p-6 shadow-md">
-            <h1 class="text-3xl font-extrabold tracking-tight mb-1">World Cup '26</h1>
-            <p class="text-blue-200 text-sm">Company Prediction Game</p>
-            <div class="mt-6 flex justify-between items-end">
+        <header class="bg-stone-900 text-stone-200 p-6 shadow-md border-b border-stone-800 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-green-900 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
+            
+            <h1 class="text-3xl font-black tracking-tighter mb-1 text-stone-100">OPERATION: <span class="text-green-600">WC '26</span></h1>
+            <p class="text-stone-500 text-xs tracking-widest uppercase font-bold">Company Prediction Network</p>
+            <div class="mt-6 flex justify-between items-end relative z-10">
                 <div>
-                    <p class="text-sm text-blue-200 mb-1">Welcome back,</p>
-                    <p id="user-nickname" class="text-xl font-bold bg-white/20 inline-block px-3 py-1 rounded-lg border border-white/30"></p>
+                    <p class="text-xs text-stone-500 mb-1 uppercase tracking-wider font-bold">Operative</p>
+                    <p id="user-nickname" class="text-lg font-black bg-stone-800 inline-block px-3 py-1 rounded-md border border-stone-700 text-green-500 shadow-inner"></p>
                 </div>
                 <div class="text-right">
-                    <p class="text-sm text-blue-200 mb-1">Your Score</p>
-                    <p id="user-score" class="text-3xl font-black">0</p>
+                    <p class="text-xs text-stone-500 mb-1 uppercase tracking-wider font-bold">Total Score</p>
+                    <p id="user-score" class="text-4xl font-black text-stone-100">0</p>
                 </div>
             </div>
         </header>
 
-        <nav class="flex border-b border-slate-200 bg-white overflow-x-auto">
-            <button onclick="switchTab('matches')" id="tab-matches" class="min-w-[25%] py-4 text-center font-bold text-blue-700 border-b-4 border-blue-700 text-sm md:text-base">Matches</button>
-            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[25%] py-4 text-center font-bold text-slate-500 border-b-4 border-transparent hover:text-blue-500 text-sm md:text-base">Tournament</button>
-            <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="min-w-[25%] py-4 text-center font-bold text-slate-500 border-b-4 border-transparent hover:text-blue-500 text-sm md:text-base">Leaderboard</button>
-            <button onclick="switchTab('info')" id="tab-info" class="min-w-[25%] py-4 text-center font-bold text-slate-500 border-b-4 border-transparent hover:text-blue-500 text-sm md:text-base">Rules & Info</button>
+        <nav class="flex border-b border-stone-800 bg-stone-900 overflow-x-auto shadow-inner">
+            <button onclick="switchTab('matches')" id="tab-matches" class="min-w-[25%] py-4 text-center font-black text-green-500 border-b-4 border-green-600 text-xs md:text-sm uppercase tracking-wider transition-colors">Matches</button>
+            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Intel</button>
+            <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Ranks</button>
+            <button onclick="switchTab('info')" id="tab-info" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Rules</button>
         </nav>
 
-        <main class="p-6 bg-slate-50 min-h-[50vh]">
+        <main class="p-4 md:p-6 min-h-[50vh]">
             
             <div id="view-matches" class="space-y-4">
-                <p class="text-slate-500 text-center">Loading matches...</p>
+                <p class="text-stone-600 text-center font-mono">Scanning for matches...</p>
             </div>
 
             <div id="view-tournament" class="hidden space-y-6">
-                <div class="flex justify-center mb-4 bg-slate-200 rounded-lg p-1 max-w-xs mx-auto">
-                    <button id="btn-groups" onclick="setTournamentMode('groups')" class="w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm">Group Tables</button>
-                    <button id="btn-bracket" onclick="setTournamentMode('bracket')" class="w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm">Live Bracket</button>
+                <div class="flex justify-center mb-4 bg-stone-900 border border-stone-800 rounded-lg p-1 max-w-xs mx-auto shadow-inner">
+                    <button id="btn-groups" onclick="setTournamentMode('groups')" class="w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider">Group Standings</button>
+                    <button id="btn-bracket" onclick="setTournamentMode('bracket')" class="w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider">Live Bracket</button>
                 </div>
                 <div id="tournament-groups" class="space-y-6">
-                    <p class="text-center text-slate-500 text-sm">Group standings will be generated here automatically once the tournament starts.</p>
+                    <p class="text-center text-stone-600 text-sm font-mono">Standings will be generated here upon deployment.</p>
                 </div>
                 <div id="tournament-bracket" class="hidden space-y-4">
-                    <p class="text-center text-slate-500 text-sm mb-4">Round of 32 Matchups (Live simulation based on current group standings)</p>
+                    <p class="text-center text-stone-600 text-sm font-mono">Round of 32 Matchups (Live simulation offline)</p>
                 </div>
             </div>
 
             <div id="view-leaderboard" class="hidden">
-                <div class="bg-blue-800 text-white rounded-xl p-5 mb-6 shadow-lg flex justify-between items-center border border-blue-600">
+                <div class="bg-stone-900 text-stone-200 rounded-xl p-5 mb-6 shadow-md flex justify-between items-center border border-stone-800">
                     <div>
-                        <p class="text-blue-300 text-xs uppercase tracking-widest font-bold mb-1">Your Rank</p>
-                        <p class="text-4xl font-black" id="my-rank-display">-</p>
+                        <p class="text-stone-500 text-[10px] uppercase tracking-widest font-bold mb-1">Your Rank</p>
+                        <p class="text-4xl font-black text-green-500" id="my-rank-display">-</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-blue-300 text-xs uppercase tracking-widest font-bold mb-1">Total Score</p>
-                        <p class="text-4xl font-black" id="my-score-display">-</p>
+                        <p class="text-stone-500 text-[10px] uppercase tracking-widest font-bold mb-1">Total Score</p>
+                        <p class="text-4xl font-black text-stone-100" id="my-score-display">-</p>
                     </div>
                 </div>
-                <div class="flex justify-center mb-8 bg-slate-200 rounded-lg p-1 max-w-xs mx-auto">
-                    <button id="btn-top50" onclick="setLeaderboardMode('top50')" class="w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm">Top 50</button>
-                    <button id="btn-around" onclick="setLeaderboardMode('around')" class="w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm">Around Me</button>
+                <div class="flex justify-center mb-8 bg-stone-900 border border-stone-800 rounded-lg p-1 max-w-xs mx-auto shadow-inner">
+                    <button id="btn-top50" onclick="setLeaderboardMode('top50')" class="w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider">Top 50</button>
+                    <button id="btn-around" onclick="setLeaderboardMode('around')" class="w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider">Around Me</button>
                 </div>
                 <div id="podium-container" class="flex justify-center items-end gap-1 mb-8 mt-4"></div>
-                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <div class="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden shadow-md">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                                <th class="p-4 font-bold border-b w-16 text-center">Rank</th>
-                                <th class="p-4 font-bold border-b">Nickname</th>
-                                <th class="p-4 font-bold border-b text-right">Score</th>
+                            <tr class="bg-stone-950 text-stone-500 text-[10px] uppercase tracking-widest">
+                                <th class="p-4 font-black border-b border-stone-800 w-16 text-center">Rank</th>
+                                <th class="p-4 font-black border-b border-stone-800">Operative</th>
+                                <th class="p-4 font-black border-b border-stone-800 text-right">Score</th>
                             </tr>
                         </thead>
-                        <tbody id="leaderboard-list">
-                            <tr><td colspan="3" class="p-4 text-center text-slate-500">Loading ranks...</td></tr>
+                        <tbody id="leaderboard-list" class="divide-y divide-stone-800/50">
+                            <tr><td colspan="3" class="p-4 text-center text-stone-600 font-mono">Retrieving ranks...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <div id="view-info" class="hidden space-y-6">
-                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                    <h2 class="text-xl font-black text-slate-800 mb-4 border-b pb-2">General Rules</h2>
-                    <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                <div class="bg-stone-900 border border-stone-800 rounded-xl p-6 shadow-md">
+                    <h2 class="text-lg font-black text-stone-100 mb-4 border-b border-stone-800 pb-2 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Protocol Rules
+                    </h2>
+                    <ul class="list-disc pl-5 space-y-3 text-stone-400 text-sm">
                         <li>Participation in this prediction game is strictly voluntary.</li>
-                        <li>Each player is only allowed one single account.</li>
-                        <li><strong>Match Deadlines:</strong> All match predictions must be submitted before the official kickoff time of the respective match. Late predictions will not be counted.</li>
-                        <li><strong>Bonus Deadlines:</strong> All bonus predictions must be submitted before the official start of the World Cup.</li>
-                        <li><strong>Regular Time Only:</strong> All predictions apply exclusively to the regular playing time (90 minutes + stoppage time). Extra time and penalty shootouts do not count!</li>
+                        <li>Each operative is only allowed one single account.</li>
+                        <li><strong>Match Deadlines:</strong> All predictions must be submitted before the official kickoff. Late entries will be rejected by the system.</li>
+                        <li><strong>Bonus Deadlines:</strong> Bonus parameters must be locked in before the official start of the World Cup.</li>
+                        <li><strong>Regular Time Only:</strong> Predictions apply exclusively to regular playing time (90m + stoppage). Extra time and penalties are ignored.</li>
                     </ul>
                 </div>
-                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                    <h2 class="text-xl font-black text-slate-800 mb-4 border-b pb-2">Points System</h2>
-                    <h3 class="font-bold text-slate-700 mb-2">Matches</h3>
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 mb-4 text-sm text-slate-600">
-                        <p class="mb-2"><span class="font-black text-blue-700 text-lg">3 pts</span> = <strong>Exact Result</strong> (e.g., predicted 2:1, actual 2:1)</p>
-                        <p><span class="font-black text-blue-700 text-lg">1 pt</span> = <strong>Correct Outcome</strong> (e.g., predicted 2:0, actual 3:1)</p>
+                <div class="bg-stone-900 border border-stone-800 rounded-xl p-6 shadow-md">
+                    <h2 class="text-lg font-black text-stone-100 mb-4 border-b border-stone-800 pb-2 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Scoring System
+                    </h2>
+                    <h3 class="font-bold text-stone-300 mb-2 uppercase text-xs tracking-widest">Matches</h3>
+                    <div class="bg-stone-950 p-4 rounded-lg border border-stone-800 mb-5 text-sm text-stone-400 shadow-inner">
+                        <p class="mb-2 flex items-center"><span class="font-black text-green-500 text-lg w-12">3 pts</span> <span><strong>Exact Result</strong> (e.g., predicted 2:1, actual 2:1)</span></p>
+                        <p class="flex items-center"><span class="font-black text-green-500 text-lg w-12">1 pt</span> <span><strong>Correct Outcome</strong> (e.g., predicted 2:0, actual 3:1)</span></p>
                     </div>
-                    <h3 class="font-bold text-slate-700 mb-2">Bonus Questions (BQ)</h3>
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 text-sm text-slate-600 space-y-2">
-                        <p><strong>BQ 1 (10 pts):</strong> Correct World Cup Winner</p>
-                        <p><strong>BQ 2 (2 pts):</strong> Top 20 nation eliminated in the group stage</p>
-                        <p><strong>BQ 3 (2 pts):</strong> Nation achieving the highest victory (goal difference)</p>
-                        <p><strong>BQ 4 (2 pts):</strong> Group with the most exciting table (lowest point diff between top 3)</p>
-                        <p><strong>BQ 5 (5 pts):</strong> Number of matches ending with a 0:0 clean sheet</p>
-                        <p><strong>BQ 6 (5 pts):</strong> Number of group winners eliminated in the Round of 32</p>
+                    <h3 class="font-bold text-stone-300 mb-2 uppercase text-xs tracking-widest">Bonus Intel (BQ)</h3>
+                    <div class="bg-stone-950 p-4 rounded-lg border border-stone-800 text-sm text-stone-400 space-y-3 shadow-inner">
+                        <p><strong>BQ 1 <span class="text-green-600">(10 pts)</span>:</strong> Correct World Cup Winner</p>
+                        <p><strong>BQ 2 <span class="text-green-600">(2 pts)</span>:</strong> Top 20 nation eliminated in the group stage</p>
+                        <p><strong>BQ 3 <span class="text-green-600">(2 pts)</span>:</strong> Nation achieving the highest victory (goal difference)</p>
+                        <p><strong>BQ 4 <span class="text-green-600">(2 pts)</span>:</strong> Group with the most exciting table (lowest point diff)</p>
+                        <p><strong>BQ 5 <span class="text-green-600">(5 pts)</span>:</strong> Number of matches ending with a 0:0 clean sheet</p>
+                        <p><strong>BQ 6 <span class="text-green-600">(5 pts)</span>:</strong> Number of group winners eliminated in the Round of 32</p>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="announcement-modal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
-            <div class="p-6 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-center relative">
-                <button onclick="closeAnnouncementModal()" class="absolute top-3 right-4 text-blue-200 hover:text-white font-bold text-2xl leading-none">&times;</button>
-                <div class="text-4xl mb-2">📣</div>
-                <h2 id="announcement-title" class="text-xl font-black tracking-tight">Announcement</h2>
+    <div id="announcement-modal" class="hidden fixed inset-0 bg-stone-950/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-stone-900 border border-stone-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="p-6 bg-stone-950 text-stone-100 text-center relative border-b border-stone-800">
+                <button onclick="closeAnnouncementModal()" class="absolute top-3 right-4 text-stone-500 hover:text-stone-100 font-bold text-2xl leading-none transition-colors">&times;</button>
+                <h2 id="announcement-title" class="text-xl font-black tracking-widest uppercase text-green-500">System Alert</h2>
             </div>
-            <div class="p-6 bg-white text-center">
-                <p id="announcement-text" class="text-slate-600 font-medium"></p>
-                <button onclick="closeAnnouncementModal()" class="mt-6 w-full bg-slate-100 text-slate-700 font-bold py-3 px-4 rounded-xl hover:bg-slate-200 transition-colors">Understood</button>
+            <div class="p-6 bg-stone-900 text-center">
+                <p id="announcement-text" class="text-stone-300 font-medium"></p>
+                <button onclick="closeAnnouncementModal()" class="mt-6 w-full bg-stone-800 text-stone-300 border border-stone-700 font-bold py-3 px-4 rounded-xl hover:bg-stone-700 hover:text-white transition-colors uppercase tracking-widest text-sm">Acknowledge</button>
             </div>
         </div>
     </div>
 
-    <div id="bonus-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-blue-800 text-white">
+    <div id="bonus-modal" class="hidden fixed inset-0 bg-stone-950/90 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-stone-900 border border-stone-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="p-5 border-b border-stone-800 flex justify-between items-center bg-stone-950">
                 <div>
-                    <h2 class="text-xl font-black tracking-tight">Bonus Questions</h2>
-                    <p class="text-xs text-blue-200">Answer before the opening match!</p>
+                    <h2 class="text-xl font-black tracking-widest uppercase text-green-500">Bonus Intel required</h2>
+                    <p class="text-xs text-stone-500 font-bold">Lock in before deployment!</p>
                 </div>
-                <button onclick="closeBonusModal()" class="text-blue-200 hover:text-white font-bold text-3xl leading-none transition-colors">&times;</button>
+                <button onclick="closeBonusModal()" class="text-stone-500 hover:text-stone-100 font-bold text-3xl leading-none transition-colors">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto space-y-6" id="bonus-questions-container">
-                <p class="text-center text-slate-500">Loading questions...</p>
+                <p class="text-center text-stone-500 font-mono">Loading parameters...</p>
             </div>
-            <div class="p-5 border-t border-slate-200 bg-slate-50">
-                <button onclick="saveBonusAnswers()" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">Save Answers</button>
+            <div class="p-5 border-t border-stone-800 bg-stone-950">
+                <button onclick="saveBonusAnswers()" class="w-full bg-green-700 text-white font-black py-3 px-4 rounded-xl hover:bg-green-600 transition-colors shadow-sm uppercase tracking-widest text-sm">Lock Answers</button>
             </div>
         </div>
     </div>
@@ -174,13 +181,9 @@
         async function authenticateUser() {
             const urlParams = new URLSearchParams(window.location.search);
             const secretKey = urlParams.get('key');
-
             if (!secretKey) return document.getElementById('error-screen').classList.remove('hidden');
-
             const { data: player, error } = await supabaseClient.from('players').select('*').eq('passphrase', secretKey).single();
-
             if (error || !player) return document.getElementById('error-screen').classList.remove('hidden');
-
             loadDashboard(player);
         }
 
@@ -188,10 +191,8 @@
             currentPlayerId = player.id;
             document.getElementById('user-nickname').textContent = player.nickname;
             document.getElementById('user-score').textContent = player.score;
-
             document.getElementById('loading-screen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
-
             fetchMatchesAndPredictions();
             checkAndShowAnnouncement();
         }
@@ -224,7 +225,7 @@
         const BONUS_QUESTIONS = [
             { id: 'bq1', text: 'BQ 1: Which nation will win the World Cup?', options: ALL_NATIONS },
             { id: 'bq2', text: 'BQ 2: Which Top 20 nation will be eliminated in the group stage?', options: TOP_20_NATIONS },
-            { id: 'bq3', text: 'BQ 3: Which nation will achieve the highest victory (goal difference)?', options: ALL_NATIONS },
+            { id: 'bq3', text: 'BQ 3: Which nation will achieve the highest victory (goal diff)?', options: ALL_NATIONS },
             { id: 'bq4', text: 'BQ 4: Which group will have the most exciting table (lowest point diff)?', options: GROUPS_A_L },
             { id: 'bq5', text: 'BQ 5: How many matches will end with a 0:0 clean sheet?', options: NUM_0_TO_104 },
             { id: 'bq6', text: 'BQ 6: How many group winners will be eliminated in the Round of 32?', options: NUM_0_TO_12 }
@@ -234,11 +235,9 @@
 
         async function checkAndShowBonusQuestions() {
             if (new Date() >= OPENING_MATCH_DATE) return;
-
             const { data: existingAnswers } = await supabaseClient.from('bonus_predictions').select('question_id').eq('player_id', currentPlayerId);
             const answeredIds = existingAnswers ? existingAnswers.map(ans => ans.question_id) : [];
             unansweredQuestions = BONUS_QUESTIONS.filter(q => !answeredIds.includes(q.id));
-
             if (unansweredQuestions.length > 0) {
                 renderBonusQuestions();
                 document.getElementById('bonus-modal').classList.remove('hidden');
@@ -252,8 +251,8 @@
                 let optionsHtml = '<option value="" disabled selected>Select an option...</option>';
                 q.options.forEach(opt => { optionsHtml += `<option value="${opt.toUpperCase()}">${opt}</option>`; });
                 const div = document.createElement('div');
-                div.className = 'bg-slate-50 border border-slate-200 p-4 rounded-xl';
-                div.innerHTML = `<label class="block text-sm font-bold text-slate-800 mb-2">${q.text}</label><select id="answer-${q.id}" class="w-full border-2 border-slate-200 p-3 rounded-lg focus:border-blue-500 bg-white cursor-pointer font-medium text-slate-700">${optionsHtml}</select>`;
+                div.className = 'bg-stone-950 border border-stone-800 p-4 rounded-xl shadow-inner';
+                div.innerHTML = `<label class="block text-sm font-bold text-stone-300 mb-2 uppercase tracking-wide">${q.text}</label><select id="answer-${q.id}" class="w-full border border-stone-700 p-3 rounded-lg focus:border-green-600 bg-stone-900 cursor-pointer font-medium text-stone-200 outline-none">${optionsHtml}</select>`;
                 container.appendChild(div);
             });
         }
@@ -267,13 +266,15 @@
                 if (val !== '') answersToSave.push({ player_id: currentPlayerId, question_id: q.id, answer: val });
             }
             if (answersToSave.length === 0) return closeBonusModal(); 
-            
             await supabaseClient.from('bonus_predictions').upsert(answersToSave);
             closeBonusModal();
             checkAndShowBonusQuestions(); 
         }
 
-        // --- MATCHES LOGIC (MIT FLAGGEN) ---
+        // --- MATCHES LOGIC (MIT SCROLL FIX & DARK MODE) ---
+        let activeDate = null; 
+        let isFirstLoad = true; 
+
         async function fetchMatchesAndPredictions() {
             const { data: matches } = await supabaseClient.from('matches').select('*').order('kickoff', { ascending: true });
             const { data: predictions } = await supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId);
@@ -288,38 +289,16 @@
             return opts;
         }
 
-                                // --- MATCHES LOGIC (MIT TAGES-FILTER, SCROLL-FIX & STAGES) ---
-        let activeDate = null; 
-        let isFirstLoad = true;
-
-        // Hilfsfunktion: Macht aus API-Code schönes Englisch
-        function formatStage(stageCode) {
-            if (!stageCode || stageCode === 'TBD') return '';
-            const stageMap = {
-                'GROUP_STAGE': 'Group Stage',
-                'LAST_32': 'Round of 32',
-                'LAST_16': 'Round of 16',
-                'QUARTER_FINALS': 'Quarter-Finals',
-                'SEMI_FINALS': 'Semi-Finals',
-                'THIRD_PLACE': 'Third Place Play-off',
-                'FINAL': 'Final'
-            };
-            return stageMap[stageCode] || stageCode.replace(/_/g, ' ');
-        }
-
         function renderMatches() {
             const vm = document.getElementById('view-matches');
-            
             let oldScrollPosition = 0;
             const existingBar = document.getElementById('date-filter-bar');
-            if (existingBar) {
-                oldScrollPosition = existingBar.scrollLeft;
-            }
+            if (existingBar) oldScrollPosition = existingBar.scrollLeft;
 
             vm.innerHTML = ''; 
 
             if (currentMatches.length === 0) {
-                vm.innerHTML = '<p class="text-slate-500 text-center">No matches scheduled right now.</p>';
+                vm.innerHTML = '<p class="text-stone-600 text-center font-mono">No matches scheduled right now.</p>';
                 return;
             }
 
@@ -338,29 +317,28 @@
             }
 
             const filterContainer = document.createElement('div');
-            filterContainer.id = 'date-filter-bar';
+            filterContainer.id = 'date-filter-bar'; 
             filterContainer.style.scrollbarWidth = 'none'; 
-            filterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-slate-200 snap-x';
+            filterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-stone-800 snap-x';
             
             dates.forEach(dateStr => {
                 const [year, month, day] = dateStr.split('-');
                 const dateObj = new Date(year, month - 1, day);
                 const shortDay = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); 
                 const shortDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
-                
                 const isActive = dateStr === activeDate;
                 
                 const btn = document.createElement('button');
-                btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-blue-700 border-blue-700 text-white shadow-md transform scale-105' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`;
+                btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-green-800 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`;
                 
                 btn.onclick = () => {
                     activeDate = dateStr;
-                    isFirstLoad = false;
+                    isFirstLoad = false; 
                     renderMatches(); 
                 };
                 
                 btn.innerHTML = `
-                    <span class="text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-blue-200' : 'text-slate-400'}">${shortDay}</span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-green-300' : 'text-stone-500'}">${shortDay}</span>
                     <span class="text-sm font-black">${shortDate}</span>
                 `;
                 filterContainer.appendChild(btn);
@@ -374,47 +352,43 @@
             
             const filteredMatches = currentMatches.filter(m => {
                 const d = new Date(m.kickoff);
-                const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                return mDateStr === activeDate;
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === activeDate;
             });
 
             filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
                 const matchTime = new Date(match.kickoff).toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
-                
                 const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
                 const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
 
-                // NEU: Das Stage-Badge generieren
-                const stageName = formatStage(match.stage);
-                const stageBadge = stageName ? `<span class="bg-blue-100 text-blue-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2 align-middle">${stageName}</span>` : '';
-
                 const card = document.createElement('div');
-                card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col';
+                card.className = 'bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden';
+                
+                // Kleine optische Spielerei: Roter/Grüner Balken an der Seite, wenn schon getippt
+                const tipStatusStyle = pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700';
+                card.classList.add(...tipStatusStyle.split(' '));
+
                 card.innerHTML = `
-                    <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide flex justify-center items-center">
-                        <span class="font-bold text-slate-700">${matchTime}</span>
-                        ${stageBadge}
-                        <span class="mx-2">•</span> 
-                        <span class="truncate max-w-[40%]">${match.venue || 'TBD'}</span>
+                    <div class="text-[10px] text-stone-500 mb-3 text-center border-b border-stone-800 pb-2 uppercase tracking-widest font-bold">
+                        <span class="text-stone-300">${matchTime}</span> • ${match.venue || 'LOCATION TBD'}
                     </div>
                     <div class="flex items-center justify-between mb-4 mt-1">
                         <div class="w-[35%] flex items-center justify-end gap-2 pr-1">
-                            <span class="font-bold text-[15px] leading-tight text-right">${match.home_team}</span>
+                            <span class="font-bold text-[15px] leading-tight text-right text-stone-200">${match.home_team}</span>
                             ${homeFlag}
                         </div>
                         <div class="w-[30%] flex justify-center items-center gap-1">
-                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50 text-slate-800">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
-                            <span class="font-bold text-slate-300 mx-0.5">-</span>
-                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50 text-slate-800">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                            <span class="font-black text-stone-600 mx-0.5">:</span>
+                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
                         </div>
                         <div class="w-[35%] flex items-center justify-start gap-2 pl-1">
                             ${awayFlag}
-                            <span class="font-bold text-[15px] leading-tight text-left">${match.away_team}</span>
+                            <span class="font-bold text-[15px] leading-tight text-left text-stone-200">${match.away_team}</span>
                         </div>
                     </div>
-                    <button onclick="savePrediction(${match.id})" class="w-full bg-blue-50 text-blue-700 font-bold py-2.5 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white text-sm shadow-sm">
-                        ${pred ? 'Update Prediction' : 'Save Prediction'}
+                    <button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">
+                        ${pred ? 'Update Coordinates' : 'Lock Coordinates'}
                     </button>
                 `;
                 listContainer.appendChild(card);
@@ -423,29 +397,24 @@
             vm.appendChild(listContainer);
 
             setTimeout(() => {
-                const activeBtn = filterContainer.querySelector('.bg-blue-700');
-                if (activeBtn) {
-                    activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                }
+                const activeBtn = filterContainer.querySelector('.bg-green-800');
+                if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }, 10);
         }
-
-
-
 
         async function savePrediction(matchId) {
             const h = document.getElementById(`home-${matchId}`).value;
             const a = document.getElementById(`away-${matchId}`).value;
-            if (h === '' || a === '') return alert('Please enter a valid score!');
+            if (h === '' || a === '') return alert('Please input valid coordinates (score)!');
             const { error } = await supabaseClient.from('predictions').upsert({ player_id: currentPlayerId, match_id: matchId, home_pred: parseInt(h), away_pred: parseInt(a) }, { onConflict: 'player_id, match_id' });
             if (!error) {
                 const btn = event.target;
-                btn.innerText = 'Saved! ✓'; btn.className = 'w-full bg-green-500 text-white font-semibold py-3 rounded-lg transition-colors';
-                setTimeout(() => { btn.innerText = 'Update Prediction'; btn.className = 'w-full bg-blue-50 text-blue-700 font-semibold py-3 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white'; }, 2000);
+                btn.innerText = 'LOCKED ✓'; btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
+                setTimeout(() => { btn.innerText = 'Update Coordinates'; btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; }, 2000);
             }
         }
 
-        // --- TOURNAMENT LOGIC (MIT FLAGGEN) ---
+        // --- TOURNAMENT LOGIC (FESTES TABELLEN-LAYOUT) ---
         async function fetchTournamentGroups() {
             const { data: standings, error } = await supabaseClient.from('group_standings').select('*');
             if (error || !standings || standings.length === 0) return;
@@ -472,38 +441,44 @@
                 teams.forEach((t, i) => {
                     const gd = t.goals_for - t.goals_against;
                     const gdDisplay = gd > 0 ? `+${gd}` : gd;
-                    const rankClass = i < 2 ? 'border-l-4 border-green-500' : (i === 2 ? 'border-l-4 border-yellow-400' : 'border-l-4 border-transparent');
-                    
-                    // Flaggen HTML für die Tabelle
-                    const teamFlag = t.crest ? `<img src="${t.crest}" class="w-5 h-5 inline-block mr-2 object-contain">` : '';
+                    const rankClass = i < 2 ? 'border-l-4 border-green-600' : (i === 2 ? 'border-l-4 border-amber-600' : 'border-l-4 border-transparent');
+                    const teamFlag = t.crest ? `<img src="${t.crest}" class="w-5 h-5 inline-block mr-2 object-contain flex-shrink-0">` : '';
 
                     rowsHtml += `
-                        <tr class="hover:bg-slate-50 border-b border-slate-100 bg-white">
-                            <td class="${rankClass} p-2 text-center text-slate-400 font-bold text-xs">${i+1}</td>
-                            <td class="p-2 font-bold text-slate-800 flex items-center">${teamFlag}${t.team_name}</td>
-                            <td class="p-2 text-center text-slate-500">${t.played}</td>
-                            <td class="p-2 text-center text-slate-500">${t.goals_for}:${t.goals_against}</td>
-                            <td class="p-2 text-center text-slate-500">${gdDisplay}</td>
-                            <td class="p-2 text-center font-black text-blue-700">${t.points}</td>
+                        <tr class="hover:bg-stone-800/50 border-b border-stone-800 bg-stone-900 transition-colors">
+                            <td class="${rankClass} p-2 text-center text-stone-500 font-black text-xs">${i+1}</td>
+                            
+                            <td class="p-2 font-bold text-stone-200">
+                                <div class="flex items-center w-full overflow-hidden">
+                                    ${teamFlag}
+                                    <span class="truncate" title="${t.team_name}">${t.team_name}</span>
+                                </div>
+                            </td>
+                            
+                            <td class="p-2 text-center text-stone-400 font-mono">${t.played}</td>
+                            <td class="p-2 text-center text-stone-400 font-mono">${t.goals_for}:${t.goals_against}</td>
+                            <td class="p-2 text-center text-stone-400 font-mono">${gdDisplay}</td>
+                            <td class="p-2 text-center font-black text-green-500">${t.points}</td>
                         </tr>
                     `;
                 });
 
+                // NEU: 'table-fixed' in der Klasse der <table> zwingt alle Tabellen ins exakt gleiche Format
                 container.innerHTML += `
-                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-6">
-                        <div class="bg-slate-100 p-3 border-b border-slate-200 font-black text-slate-700 flex justify-between items-center">
-                            <span>Group ${groupId}</span>
-                            <span class="text-xs font-normal text-slate-500">P = Played, Pts = Points</span>
+                    <div class="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden shadow-md mb-6">
+                        <div class="bg-stone-950 p-3 border-b border-stone-800 font-black text-stone-300 flex justify-between items-center uppercase tracking-widest text-sm">
+                            <span>Sector ${groupId}</span>
+                            <span class="text-[10px] font-bold text-stone-600">P=Played, Pts=Points</span>
                         </div>
-                        <table class="w-full text-left border-collapse text-sm">
+                        <table class="w-full text-left border-collapse text-sm table-fixed">
                             <thead>
-                                <tr class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
+                                <tr class="bg-stone-950 text-stone-500 text-[10px] uppercase tracking-widest">
                                     <th class="p-2 text-center w-8">#</th>
-                                    <th class="p-2">Team</th>
-                                    <th class="p-2 text-center" title="Played">P</th>
-                                    <th class="p-2 text-center" title="Goals">Goals</th>
-                                    <th class="p-2 text-center" title="Goal Difference">GD</th>
-                                    <th class="p-2 text-center" title="Points">Pts</th>
+                                    <th class="p-2 w-[35%]">Entity</th>
+                                    <th class="p-2 text-center w-8" title="Played">P</th>
+                                    <th class="p-2 text-center w-12" title="Goals">Goals</th>
+                                    <th class="p-2 text-center w-8" title="Goal Difference">GD</th>
+                                    <th class="p-2 text-center w-10" title="Points">Pts</th>
                                 </tr>
                             </thead>
                             <tbody>${rowsHtml}</tbody>
@@ -517,12 +492,12 @@
         function switchTab(t) {
             ['matches','tournament','leaderboard','info'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.add('hidden');
-                document.getElementById(`tab-${id}`).classList.remove('text-blue-700', 'border-blue-700');
-                document.getElementById(`tab-${id}`).classList.add('text-slate-500', 'border-transparent');
+                document.getElementById(`tab-${id}`).classList.remove('text-green-500', 'border-green-600');
+                document.getElementById(`tab-${id}`).classList.add('text-stone-500', 'border-transparent');
             });
             document.getElementById(`view-${t}`).classList.remove('hidden');
-            document.getElementById(`tab-${t}`).classList.remove('text-slate-500', 'border-transparent');
-            document.getElementById(`tab-${t}`).classList.add('text-blue-700', 'border-blue-700');
+            document.getElementById(`tab-${t}`).classList.remove('text-stone-500', 'border-transparent');
+            document.getElementById(`tab-${t}`).classList.add('text-green-500', 'border-green-600');
             
             if (t === 'leaderboard') fetchLeaderboard(); 
             if (t === 'tournament') fetchTournamentGroups(); 
@@ -531,7 +506,7 @@
         function setTournamentMode(m) {
             ['groups','bracket'].forEach(id => {
                 document.getElementById(`tournament-${id}`).classList[m===id ? 'remove' : 'add']('hidden');
-                document.getElementById(`btn-${id}`).className = m===id ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
+                document.getElementById(`btn-${id}`).className = m===id ? "w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider" : "w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider";
             });
         }
 
@@ -553,8 +528,8 @@
 
         function setLeaderboardMode(m) {
             currentLeaderboardMode = m;
-            document.getElementById('btn-top50').className = m==='top50' ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
-            document.getElementById('btn-around').className = m==='around' ? "w-1/2 py-2 rounded-md bg-white text-blue-800 font-bold shadow-sm transition-all text-sm" : "w-1/2 py-2 rounded-md text-slate-500 font-bold hover:text-slate-700 transition-all text-sm";
+            document.getElementById('btn-top50').className = m==='top50' ? "w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider" : "w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider";
+            document.getElementById('btn-around').className = m==='around' ? "w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider" : "w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider";
             renderCurrentLeaderboardView();
         }
 
@@ -563,9 +538,19 @@
             let list = [], start = 0;
             if (currentLeaderboardMode === 'top50') {
                 if(allPlayersCached.length >= 3) {
-                    pc.innerHTML = `<div class="flex flex-col items-center w-28"><span class="text-xs font-bold text-slate-600 mb-1 truncate w-full text-center px-1">${allPlayersCached[1].nickname}</span><div class="w-full h-24 bg-slate-200 border-t-4 border-slate-400 rounded-t-xl flex justify-center items-start pt-3 font-black text-3xl text-slate-400 shadow-inner">2</div></div>
-                                    <div class="flex flex-col items-center w-32 z-10 -mx-2"><span class="text-sm font-black text-amber-600 mb-1 truncate w-full text-center px-1">${allPlayersCached[0].nickname}</span><div class="w-full h-32 bg-amber-100 border-t-4 border-amber-400 rounded-t-xl flex justify-center items-start pt-3 font-black text-4xl text-amber-500 shadow-lg">1</div></div>
-                                    <div class="flex flex-col items-center w-28"><span class="text-xs font-bold text-orange-800 mb-1 truncate w-full text-center px-1">${allPlayersCached[2].nickname}</span><div class="w-full h-20 bg-orange-100 border-t-4 border-orange-400 rounded-t-xl flex justify-center items-start pt-2 font-black text-3xl text-orange-400 shadow-inner">3</div></div>`;
+                    pc.innerHTML = `
+                        <div class="flex flex-col items-center w-28">
+                            <span class="text-[10px] font-bold text-stone-400 mb-1 truncate w-full text-center px-1">${allPlayersCached[1].nickname}</span>
+                            <div class="w-full h-24 bg-stone-800 border-t-4 border-stone-500 rounded-t-lg flex justify-center items-start pt-3 font-black text-3xl text-stone-600 shadow-inner">2</div>
+                        </div>
+                        <div class="flex flex-col items-center w-32 z-10 -mx-2">
+                            <span class="text-xs font-black text-amber-500 mb-1 truncate w-full text-center px-1">${allPlayersCached[0].nickname}</span>
+                            <div class="w-full h-32 bg-amber-900/30 border-t-4 border-amber-500 rounded-t-lg flex justify-center items-start pt-3 font-black text-4xl text-amber-600 shadow-2xl">1</div>
+                        </div>
+                        <div class="flex flex-col items-center w-28">
+                            <span class="text-[10px] font-bold text-orange-700 mb-1 truncate w-full text-center px-1">${allPlayersCached[2].nickname}</span>
+                            <div class="w-full h-20 bg-stone-800 border-t-4 border-orange-800 rounded-t-lg flex justify-center items-start pt-2 font-black text-3xl text-stone-600 shadow-inner">3</div>
+                        </div>`;
                     pc.classList.remove('hidden');
                 }
                 list = allPlayersCached.slice(3, 50); start = 3; 
@@ -578,8 +563,8 @@
             const ll = document.getElementById('leaderboard-list'); ll.innerHTML = '';
             list.forEach((p, i) => {
                 const tr = document.createElement('tr');
-                tr.className = p.id === currentPlayerId ? 'bg-blue-50 border-l-4 border-blue-600' : 'hover:bg-slate-50 border-l-4 border-transparent';
-                tr.innerHTML = `<td class="p-4 text-slate-400 font-bold text-center">${start + i + 1}</td><td class="p-4 text-slate-800 font-medium">${p.nickname}</td><td class="p-4 text-right text-slate-800 font-black">${p.score}</td>`;
+                tr.className = p.id === currentPlayerId ? 'bg-stone-800 border-l-4 border-l-green-600' : 'hover:bg-stone-800/50 border-l-4 border-l-transparent transition-colors';
+                tr.innerHTML = `<td class="p-4 text-stone-500 font-bold text-center text-xs">${start + i + 1}</td><td class="p-4 text-stone-300 font-medium">${p.nickname}</td><td class="p-4 text-right text-stone-100 font-black">${p.score}</td>`;
                 ll.appendChild(tr);
             });
         }
