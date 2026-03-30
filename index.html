@@ -280,31 +280,44 @@
         return opts;
     }
 
-    function renderMatches() {
+        function renderMatches() {
         const vm = document.getElementById('view-matches');
         vm.innerHTML = ''; 
         if (currentMatches.length === 0) return vm.innerHTML = '<p class="text-slate-500 text-center">No matches scheduled right now.</p>';
+        
         currentMatches.forEach(match => {
             const pred = currentPredictions.find(p => p.match_id === match.id);
             const matchDate = new Date(match.kickoff).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+            
+            // Flaggen HTML vorbereiten (nur anzeigen, wenn ein Link vorhanden ist)
+            const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
+            const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
+
             const card = document.createElement('div');
             card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col mb-4';
             card.innerHTML = `
                 <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide"><span class="font-bold">${matchDate}</span> • ${match.venue || 'TBD'}</div>
                 <div class="flex items-center justify-between mb-4 mt-2">
-                    <div class="text-right w-1/3 font-bold text-lg leading-tight pr-2">${match.home_team}</div>
-                    <div class="w-1/3 flex justify-center items-center gap-1">
-                        <select id="home-${match.id}" class="w-14 h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
-                        <span class="font-bold text-slate-400 mx-1">-</span>
-                        <select id="away-${match.id}" class="w-14 h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                    <div class="w-[35%] flex items-center justify-end gap-2 pr-2">
+                        <span class="font-bold text-lg leading-tight text-right">${match.home_team}</span>
+                        ${homeFlag}
                     </div>
-                    <div class="text-left w-1/3 font-bold text-lg leading-tight pl-2">${match.away_team}</div>
+                    <div class="w-[30%] flex justify-center items-center gap-1">
+                        <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                        <span class="font-bold text-slate-400 mx-1">-</span>
+                        <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                    </div>
+                    <div class="w-[35%] flex items-center justify-start gap-2 pl-2">
+                        ${awayFlag}
+                        <span class="font-bold text-lg leading-tight text-left">${match.away_team}</span>
+                    </div>
                 </div>
                 <button onclick="savePrediction(${match.id})" class="w-full bg-blue-50 text-blue-700 font-semibold py-3 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white">${pred ? 'Update Prediction' : 'Save Prediction'}</button>
             `;
             vm.appendChild(card);
         });
     }
+
 
     async function savePrediction(matchId) {
         const h = document.getElementById(`home-${matchId}`).value;
@@ -319,11 +332,10 @@
     }
 
     // --- TOURNAMENT LOGIC (NEU) ---
-    async function fetchTournamentGroups() {
+        async function fetchTournamentGroups() {
         const { data: standings, error } = await supabaseClient.from('group_standings').select('*');
         if (error || !standings || standings.length === 0) return;
 
-        // Nach Gruppen (A-L) sortieren
         const groups = {};
         standings.forEach(team => {
             if (!groups[team.group_id]) groups[team.group_id] = [];
@@ -334,7 +346,6 @@
         container.innerHTML = '';
 
         Object.keys(groups).sort().forEach(groupId => {
-            // Logik: Sortieren nach Punkten, dann Tordifferenz, dann geschossene Tore
             const teams = groups[groupId].sort((a, b) => {
                 if (b.points !== a.points) return b.points - a.points;
                 const gdA = a.goals_for - a.goals_against;
@@ -347,13 +358,15 @@
             teams.forEach((t, i) => {
                 const gd = t.goals_for - t.goals_against;
                 const gdDisplay = gd > 0 ? `+${gd}` : gd;
-                // Platz 1 & 2 grün markieren (Sicheres Weiterkommen)
                 const rankClass = i < 2 ? 'border-l-4 border-green-500' : (i === 2 ? 'border-l-4 border-yellow-400' : 'border-l-4 border-transparent');
+                
+                // Flaggen HTML für die Tabelle
+                const teamFlag = t.crest ? `<img src="${t.crest}" class="w-5 h-5 inline-block mr-2 object-contain">` : '';
 
                 rowsHtml += `
                     <tr class="hover:bg-slate-50 border-b border-slate-100 bg-white">
                         <td class="${rankClass} p-2 text-center text-slate-400 font-bold text-xs">${i+1}</td>
-                        <td class="p-2 font-bold text-slate-800">${t.team_name}</td>
+                        <td class="p-2 font-bold text-slate-800 flex items-center">${teamFlag}${t.team_name}</td>
                         <td class="p-2 text-center text-slate-500">${t.played}</td>
                         <td class="p-2 text-center text-slate-500">${t.goals_for}:${t.goals_against}</td>
                         <td class="p-2 text-center text-slate-500">${gdDisplay}</td>
@@ -361,6 +374,31 @@
                     </tr>
                 `;
             });
+
+            container.innerHTML += `
+                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-6">
+                    <div class="bg-slate-100 p-3 border-b border-slate-200 font-black text-slate-700 flex justify-between items-center">
+                        <span>Group ${groupId}</span>
+                        <span class="text-xs font-normal text-slate-500">P = Played, Pts = Points</span>
+                    </div>
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
+                                <th class="p-2 text-center w-8">#</th>
+                                <th class="p-2">Team</th>
+                                <th class="p-2 text-center" title="Played">P</th>
+                                <th class="p-2 text-center" title="Goals">Goals</th>
+                                <th class="p-2 text-center" title="Goal Difference">GD</th>
+                                <th class="p-2 text-center" title="Points">Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+        });
+    }
+
 
             container.innerHTML += `
                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-6">
