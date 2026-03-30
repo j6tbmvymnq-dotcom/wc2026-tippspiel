@@ -25,9 +25,8 @@ async function runUpdate() {
             const awayTeam = match.awayTeam?.name || 'TBD';
             const homeScore = match.score?.fullTime?.home ?? null;
             const awayScore = match.score?.fullTime?.away ?? null;
-            const venueName = match.venue || 'TBD'; // Die API wird das bald füllen
+            const venueName = match.venue || 'TBD';
             
-            // NEU: Flaggen-URLs auslesen
             const homeLogo = match.homeTeam?.crest || '';
             const awayLogo = match.awayTeam?.crest || '';
 
@@ -78,26 +77,41 @@ async function runUpdate() {
 
             for (const group of groupStandings) {
                 const groupId = group.group ? group.group.replace('GROUP_', '') : 'TBD';
+                let teamIndex = 1; // Ein Zähler für fehlende Teams
+                
                 for (const teamRow of group.table) {
+                    // Sicherheitsnetz: Prüfen, ob team und team.id existieren
+                    const tId = teamRow.team?.id ? teamRow.team.id.toString() : `TBD_${groupId}_${teamIndex}`;
+                    const tName = teamRow.team?.name || `TBD (Group ${groupId})`;
+                    const tCrest = teamRow.team?.crest || '';
+
                     standingsToUpsert.push({
-                        team_id: teamRow.team.id.toString(),
-                        team_name: teamRow.team.name,
+                        team_id: tId,
+                        team_name: tName,
                         group_id: groupId,
-                        played: teamRow.playedGames,
-                        won: teamRow.won,
-                        drawn: teamRow.draw,
-                        lost: teamRow.lost,
-                        goals_for: teamRow.goalsFor,
-                        goals_against: teamRow.goalsAgainst,
-                        points: teamRow.points,
-                        crest: teamRow.team.crest || '' // NEU: Flagge für die Tabelle
+                        played: teamRow.playedGames || 0,
+                        won: teamRow.won || 0,
+                        drawn: teamRow.draw || 0,
+                        lost: teamRow.lost || 0,
+                        goals_for: teamRow.goalsFor || 0,
+                        goals_against: teamRow.goalsAgainst || 0,
+                        points: teamRow.points || 0,
+                        crest: tCrest 
                     });
+                    
+                    teamIndex++;
                 }
             }
             if (standingsToUpsert.length > 0) {
-                await supabase.from('group_standings').upsert(standingsToUpsert);
+                const { error: standingsError } = await supabase.from('group_standings').upsert(standingsToUpsert);
+                if (standingsError) console.error("Datenbankfehler bei Tabellen:", standingsError);
             }
+        } else {
+             console.warn(`API Fehler (Standings): ${standingsResponse.status}`);
         }
+        
+        console.log("Update-Job komplett und erfolgreich abgeschlossen!");
+
     } catch (error) {
         console.error("Schwerer Fehler beim Update-Job:", error);
     }
