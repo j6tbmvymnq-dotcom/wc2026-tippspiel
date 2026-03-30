@@ -288,43 +288,125 @@
             return opts;
         }
 
+                // --- MATCHES LOGIC (MIT TAGES-FILTER) ---
+        let activeDate = null; // Speichert den aktuell ausgewählten Tag
+
         function renderMatches() {
             const vm = document.getElementById('view-matches');
             vm.innerHTML = ''; 
-            if (currentMatches.length === 0) return vm.innerHTML = '<p class="text-slate-500 text-center">No matches scheduled right now.</p>';
 
-            currentMatches.forEach(match => {
-                const pred = currentPredictions.find(p => p.match_id === match.id);
-                const matchDate = new Date(match.kickoff).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+            if (currentMatches.length === 0) {
+                vm.innerHTML = '<p class="text-slate-500 text-center">No matches scheduled right now.</p>';
+                return;
+            }
+
+            // 1. Alle einzigartigen lokalen Datums-Strings ermitteln (Format: YYYY-MM-DD)
+            const datesMap = new Set();
+            currentMatches.forEach(m => {
+                const d = new Date(m.kickoff);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                datesMap.add(dateStr);
+            });
+            const dates = Array.from(datesMap).sort();
+
+            // 2. Standardmäßig den ersten Spieltag (oder heute) auswählen
+            if (!activeDate || !dates.includes(activeDate)) {
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                activeDate = dates.includes(todayStr) ? todayStr : dates[0];
+            }
+
+            // 3. Die horizontal scrollbare Datums-Leiste bauen
+            const filterContainer = document.createElement('div');
+            // 'scrollbar-width: none' versteckt die unschöne Scrollbar in modernen Browsern
+            filterContainer.style.scrollbarWidth = 'none'; 
+            filterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-slate-200 snap-x';
+            
+            dates.forEach(dateStr => {
+                // Das Datum wieder in ein Objekt wandeln, um den Tag und Monat für die Anzeige zu holen
+                const [year, month, day] = dateStr.split('-');
+                const dateObj = new Date(year, month - 1, day);
                 
-                // Flaggen HTML vorbereiten (nur anzeigen, wenn ein Link vorhanden ist)
-                const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
-                const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain">` : '';
+                const shortDay = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); // z.B. "Thu"
+                const shortDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // z.B. "Jun 11"
+                
+                const isActive = dateStr === activeDate;
+                
+                const btn = document.createElement('button');
+                btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-blue-700 border-blue-700 text-white shadow-md transform scale-105' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`;
+                
+                btn.onclick = () => {
+                    activeDate = dateStr;
+                    renderMatches(); // Lade die Ansicht neu mit dem neuen Tag
+                };
+                
+                btn.innerHTML = `
+                    <span class="text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-blue-200' : 'text-slate-400'}">${shortDay}</span>
+                    <span class="text-sm font-black">${shortDate}</span>
+                `;
+                filterContainer.appendChild(btn);
+            });
+            
+            vm.appendChild(filterContainer);
+
+            // 4. Die Spiele-Liste für den ausgewählten Tag bauen
+            const listContainer = document.createElement('div');
+            listContainer.className = 'space-y-4';
+            
+            // Nur Spiele filtern, die am "activeDate" stattfinden
+            const filteredMatches = currentMatches.filter(m => {
+                const d = new Date(m.kickoff);
+                const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                return mDateStr === activeDate;
+            });
+
+            filteredMatches.forEach(match => {
+                const pred = currentPredictions.find(p => p.match_id === match.id);
+                // Da das Datum schon oben in der Leiste steht, reicht hier die reine Uhrzeit!
+                const matchTime = new Date(match.kickoff).toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
+                
+                const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
+                const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
 
                 const card = document.createElement('div');
-                card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col mb-4';
+                card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col';
                 card.innerHTML = `
-                    <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide"><span class="font-bold">${matchDate}</span> • ${match.venue || 'TBD'}</div>
-                    <div class="flex items-center justify-between mb-4 mt-2">
-                        <div class="w-[35%] flex items-center justify-end gap-2 pr-2">
-                            <span class="font-bold text-lg leading-tight text-right">${match.home_team}</span>
+                    <div class="text-xs text-slate-500 mb-3 text-center border-b pb-2 uppercase tracking-wide">
+                        <span class="font-bold text-slate-700">${matchTime}</span> • ${match.venue || 'TBD'}
+                    </div>
+                    <div class="flex items-center justify-between mb-4 mt-1">
+                        <div class="w-[35%] flex items-center justify-end gap-2 pr-1">
+                            <span class="font-bold text-[15px] leading-tight text-right">${match.home_team}</span>
                             ${homeFlag}
                         </div>
                         <div class="w-[30%] flex justify-center items-center gap-1">
-                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
-                            <span class="font-bold text-slate-400 mx-1">-</span>
-                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50 text-slate-800">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                            <span class="font-bold text-slate-300 mx-0.5">-</span>
+                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 border-2 border-slate-200 text-center rounded-lg font-bold focus:border-blue-500 appearance-none bg-slate-50 text-slate-800">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
                         </div>
-                        <div class="w-[35%] flex items-center justify-start gap-2 pl-2">
+                        <div class="w-[35%] flex items-center justify-start gap-2 pl-1">
                             ${awayFlag}
-                            <span class="font-bold text-lg leading-tight text-left">${match.away_team}</span>
+                            <span class="font-bold text-[15px] leading-tight text-left">${match.away_team}</span>
                         </div>
                     </div>
-                    <button onclick="savePrediction(${match.id})" class="w-full bg-blue-50 text-blue-700 font-semibold py-3 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white">${pred ? 'Update Prediction' : 'Save Prediction'}</button>
+                    <button onclick="savePrediction(${match.id})" class="w-full bg-blue-50 text-blue-700 font-bold py-2.5 rounded-lg border border-blue-200 transition-colors hover:bg-blue-600 hover:text-white text-sm shadow-sm">
+                        ${pred ? 'Update Prediction' : 'Save Prediction'}
+                    </button>
                 `;
-                vm.appendChild(card);
+                listContainer.appendChild(card);
             });
+            
+            vm.appendChild(listContainer);
+
+            // 5. UX-Trick: Die Leiste automatisch so scrollen, dass der aktive Tag mittig im Bild ist
+            setTimeout(() => {
+                const activeBtn = filterContainer.querySelector('.bg-blue-700');
+                if (activeBtn) {
+                    activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            }, 50);
         }
+
 
         async function savePrediction(matchId) {
             const h = document.getElementById(`home-${matchId}`).value;
