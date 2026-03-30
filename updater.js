@@ -42,7 +42,6 @@ async function runUpdate() {
 
             if (matchError) console.error(`Fehler bei Spiel ${matchId}:`, matchError);
 
-            // Punkte berechnen, wenn das Spiel neu beendet wurde
             if (match.status === 'FINISHED' && homeScore !== null && awayScore !== null) {
                 const { data: predictions } = await supabase
                     .from('predictions')
@@ -80,25 +79,28 @@ async function runUpdate() {
             const standingsData = await standingsResponse.json();
             const standingsToUpsert = [];
 
-            // Die API liefert verschiedene Tabellen-Typen, wir brauchen "TOTAL" (Gesamttabelle der Gruppe)
             const groupStandings = standingsData.standings.filter(s => s.type === 'TOTAL');
 
             for (const group of groupStandings) {
-                // Die API nennt Gruppen z.B. "GROUP_A". Wir schneiden "GROUP_" weg, damit nur "A" bleibt.
                 const groupId = group.group ? group.group.replace('GROUP_', '') : 'TBD';
 
                 for (const teamRow of group.table) {
+                    
+                    // FIX: Sichere Abfrage für Teams, die noch "null" sind
+                    const safeTeamId = teamRow.team?.id ? teamRow.team.id.toString() : `TBD_${groupId}_${teamRow.position}`;
+                    const safeTeamName = teamRow.team?.name || `Team ${groupId}${teamRow.position}`;
+
                     standingsToUpsert.push({
-                        team_id: teamRow.team.id.toString(), // Die API nutzt IDs wie '759' für Deutschland
-                        team_name: teamRow.team.name,
+                        team_id: safeTeamId,
+                        team_name: safeTeamName,
                         group_id: groupId,
-                        played: teamRow.playedGames,
-                        won: teamRow.won,
-                        drawn: teamRow.draw,
-                        lost: teamRow.lost,
-                        goals_for: teamRow.goalsFor,
-                        goals_against: teamRow.goalsAgainst,
-                        points: teamRow.points
+                        played: teamRow.playedGames || 0,
+                        won: teamRow.won || 0,
+                        drawn: teamRow.draw || 0,
+                        lost: teamRow.lost || 0,
+                        goals_for: teamRow.goalsFor || 0,
+                        goals_against: teamRow.goalsAgainst || 0,
+                        points: teamRow.points || 0
                     });
                 }
             }
