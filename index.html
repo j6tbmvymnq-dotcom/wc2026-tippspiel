@@ -288,11 +288,20 @@
             return opts;
         }
 
-                // --- MATCHES LOGIC (MIT TAGES-FILTER) ---
-        let activeDate = null; // Speichert den aktuell ausgewählten Tag
+                        // --- MATCHES LOGIC (MIT TAGES-FILTER & SCROLL-FIX) ---
+        let activeDate = null; 
+        let isFirstLoad = true; // Merkt sich, ob die App gerade erst geöffnet wurde
 
         function renderMatches() {
             const vm = document.getElementById('view-matches');
+            
+            // FIX: Bevor wir alles löschen, merken wir uns die genaue Scroll-Position der Leiste!
+            let oldScrollPosition = 0;
+            const existingBar = document.getElementById('date-filter-bar');
+            if (existingBar) {
+                oldScrollPosition = existingBar.scrollLeft;
+            }
+
             vm.innerHTML = ''; 
 
             if (currentMatches.length === 0) {
@@ -318,17 +327,16 @@
 
             // 3. Die horizontal scrollbare Datums-Leiste bauen
             const filterContainer = document.createElement('div');
-            // 'scrollbar-width: none' versteckt die unschöne Scrollbar in modernen Browsern
+            filterContainer.id = 'date-filter-bar'; // WICHTIG: ID für das Scroll-Gedächtnis
             filterContainer.style.scrollbarWidth = 'none'; 
             filterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-slate-200 snap-x';
             
             dates.forEach(dateStr => {
-                // Das Datum wieder in ein Objekt wandeln, um den Tag und Monat für die Anzeige zu holen
                 const [year, month, day] = dateStr.split('-');
                 const dateObj = new Date(year, month - 1, day);
                 
-                const shortDay = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); // z.B. "Thu"
-                const shortDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // z.B. "Jun 11"
+                const shortDay = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); 
+                const shortDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
                 
                 const isActive = dateStr === activeDate;
                 
@@ -337,7 +345,8 @@
                 
                 btn.onclick = () => {
                     activeDate = dateStr;
-                    renderMatches(); // Lade die Ansicht neu mit dem neuen Tag
+                    isFirstLoad = false; // Bei Klick ist es kein Erstaufruf mehr
+                    renderMatches(); 
                 };
                 
                 btn.innerHTML = `
@@ -349,11 +358,13 @@
             
             vm.appendChild(filterContainer);
 
+            // FIX: SOFORT die alte Scroll-Position wiederherstellen, BEVOR der Browser den Rest zeichnet
+            filterContainer.scrollLeft = oldScrollPosition;
+
             // 4. Die Spiele-Liste für den ausgewählten Tag bauen
             const listContainer = document.createElement('div');
             listContainer.className = 'space-y-4';
             
-            // Nur Spiele filtern, die am "activeDate" stattfinden
             const filteredMatches = currentMatches.filter(m => {
                 const d = new Date(m.kickoff);
                 const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -362,7 +373,6 @@
 
             filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
-                // Da das Datum schon oben in der Leiste steht, reicht hier die reine Uhrzeit!
                 const matchTime = new Date(match.kickoff).toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
                 
                 const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
@@ -398,14 +408,15 @@
             
             vm.appendChild(listContainer);
 
-            // 5. UX-Trick: Die Leiste automatisch so scrollen, dass der aktive Tag mittig im Bild ist
+            // 5. UX-Trick: Sanftes Nachjustieren (Zentrieren)
             setTimeout(() => {
                 const activeBtn = filterContainer.querySelector('.bg-blue-700');
                 if (activeBtn) {
                     activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
-            }, 50);
+            }, 10);
         }
+
 
 
         async function savePrediction(matchId) {
