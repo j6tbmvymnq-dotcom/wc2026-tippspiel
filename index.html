@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Cup 2026 - Tactical Prediction</title>
+    <title>MNBG - World Cup 2026</title>
     
     <link rel="icon" type="image/png" href="Wappen.png">
     <link rel="apple-touch-icon" href="Wappen.png">
@@ -36,14 +36,14 @@
                 <button onclick="window.location.reload()" class="text-stone-400 hover:text-white transition-colors p-2 bg-stone-800 rounded-full border border-stone-700 shadow-md focus:outline-none focus:ring-2 focus:ring-green-600">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 </button>
-                <img src="Wappen.png" alt="Logo" class="w-10 h-10 object-contain drop-shadow-lg">
+                <img src="Wappen.png" alt="Logo" class="w-20 h-24 object-contain drop-shadow-lg">
             </div>
 
-            <h1 class="text-3xl font-black tracking-tighter mb-1 text-stone-100 pr-24">OPERATION: <br/><span class="text-green-600">WC '26</span></h1>
-            <p class="text-stone-500 text-xs tracking-widest uppercase font-bold">Company Prediction Network</p>
+            <h1 class="text-3xl font-black tracking-tighter mb-1 text-stone-100 pr-24">MN BG LTU: <br/><span class="text-green-600">WorldCup '26</span></h1>
+            <p class="text-stone-500 text-xs tracking-widest uppercase font-bold">Prediction Game</p>
             <div class="mt-6 flex justify-between items-end relative z-10">
                 <div>
-                    <p class="text-xs text-stone-500 mb-1 uppercase tracking-wider font-bold">Operative</p>
+                    <p class="text-xs text-stone-500 mb-1 uppercase tracking-wider font-bold">User:</p>
                     <p id="user-nickname" class="text-lg font-black bg-stone-800 inline-block px-3 py-1 rounded-md border border-stone-700 text-green-500 shadow-inner"></p>
                 </div>
                 <div class="text-right">
@@ -122,7 +122,7 @@
                         <p class="mb-2 flex items-center"><span class="font-black text-green-500 text-lg w-12">3 pts</span> <span><strong>Exact Result</strong> (e.g., predicted 2:1, actual 2:1)</span></p>
                         <p class="flex items-center"><span class="font-black text-green-500 text-lg w-12">1 pt</span> <span><strong>Correct Outcome</strong> (e.g., predicted 2:0, actual 3:1)</span></p>
                     </div>
-                    <h3 class="font-bold text-stone-300 mb-2 uppercase text-xs tracking-widest">Bonus Intel (BQ)</h3>
+                    <h3 class="font-bold text-stone-300 mb-2 uppercase text-xs tracking-widest">Bonus Question (BQ)</h3>
                     <div class="bg-stone-950 p-4 rounded-lg border border-stone-800 text-sm text-stone-400 space-y-3 shadow-inner">
                         <p><strong>BQ 1 <span class="text-green-600">(10 pts)</span>:</strong> Correct World Cup Winner</p>
                         <p><strong>BQ 2 <span class="text-green-600">(2 pts)</span>:</strong> Top 20 nation eliminated in group stage</p>
@@ -140,7 +140,6 @@
         <div class="bg-stone-900 border border-stone-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
             <div class="p-6 bg-stone-950 text-stone-100 text-center relative border-b border-stone-800">
                 <button onclick="closeAnnouncementModal()" class="absolute top-3 right-4 text-stone-500 hover:text-stone-100 font-bold text-2xl leading-none transition-colors">&times;</button>
-                <div class="text-4xl mb-2">⚠️</div>
                 <h2 id="announcement-title" class="text-xl font-black tracking-widest uppercase text-green-500">System Alert</h2>
             </div>
             <div class="p-6 bg-stone-900 text-center">
@@ -154,8 +153,8 @@
         <div class="bg-stone-900 border border-stone-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
             <div class="p-5 border-b border-stone-800 flex justify-between items-center bg-stone-950">
                 <div>
-                    <h2 class="text-xl font-black tracking-widest uppercase text-green-500">Bonus Intel required</h2>
-                    <p class="text-xs text-stone-500 font-bold">Lock in before deployment!</p>
+                    <h2 class="text-xl font-black tracking-widest uppercase text-green-500">Bonus Question</h2>
+                    <p class="text-xs text-stone-500 font-bold">Lock in before the WorldCup starts!</p>
                 </div>
                 <button onclick="closeBonusModal()" class="text-stone-500 hover:text-stone-100 font-bold text-3xl leading-none transition-colors">&times;</button>
             </div>
@@ -598,7 +597,7 @@
             renderCurrentLeaderboardView();
         }
 
-        function renderCurrentLeaderboardView() {
+                function renderCurrentLeaderboardView() {
             const pc = document.getElementById('podium-container');
             let list = [], start = 0;
             if (currentLeaderboardMode === 'top50') {
@@ -606,15 +605,24 @@
                     pc.innerHTML = `
                         <div class="flex flex-col items-center w-28">
                             <span class="text-[10px] font-bold text-stone-400 mb-1 truncate w-full text-center px-1">${allPlayersCached[1].nickname}</span>
-                            <div class="w-full h-24 bg-stone-800 border-t-4 border-stone-500 rounded-t-lg flex justify-center items-start pt-3 font-black text-3xl text-stone-600 shadow-inner">2</div>
+                            <div class="w-full h-24 bg-stone-800 border-t-4 border-stone-500 rounded-t-lg flex flex-col items-center justify-start pt-2 shadow-inner">
+                                <span class="font-black text-3xl text-stone-600 leading-none">2</span>
+                                <span class="text-[12px] font-black text-stone-400 mt-1 tracking-widest">${allPlayersCached[1].score} PTS</span>
+                            </div>
                         </div>
                         <div class="flex flex-col items-center w-32 z-10 -mx-2">
                             <span class="text-xs font-black text-amber-500 mb-1 truncate w-full text-center px-1">${allPlayersCached[0].nickname}</span>
-                            <div class="w-full h-32 bg-amber-900/30 border-t-4 border-amber-500 rounded-t-lg flex justify-center items-start pt-3 font-black text-4xl text-amber-600 shadow-2xl">1</div>
+                            <div class="w-full h-32 bg-amber-900/30 border-t-4 border-amber-500 rounded-t-lg flex flex-col items-center justify-start pt-3 shadow-2xl">
+                                <span class="font-black text-4xl text-amber-600 leading-none">1</span>
+                                <span class="text-[14px] font-black text-amber-500 mt-1 tracking-widest">${allPlayersCached[0].score} PTS</span>
+                            </div>
                         </div>
                         <div class="flex flex-col items-center w-28">
                             <span class="text-[10px] font-bold text-orange-700 mb-1 truncate w-full text-center px-1">${allPlayersCached[2].nickname}</span>
-                            <div class="w-full h-20 bg-stone-800 border-t-4 border-orange-800 rounded-t-lg flex justify-center items-start pt-2 font-black text-3xl text-stone-600 shadow-inner">3</div>
+                            <div class="w-full h-20 bg-stone-800 border-t-4 border-orange-800 rounded-t-lg flex flex-col items-center justify-start pt-2 shadow-inner">
+                                <span class="font-black text-3xl text-stone-600 leading-none">3</span>
+                                <span class="text-[12px] font-black text-stone-400 mt-1 tracking-widest">${allPlayersCached[2].score} PTS</span>
+                            </div>
                         </div>`;
                     pc.classList.remove('hidden');
                 }
@@ -633,6 +641,7 @@
                 ll.appendChild(tr);
             });
         }
+
 
         authenticateUser();
     </script>
