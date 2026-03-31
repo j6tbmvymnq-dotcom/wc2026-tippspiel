@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World Cup 2026 - Tactical Prediction</title>
+    
+    <link rel="icon" type="image/png" href="Wappen.png">
+    <link rel="apple-touch-icon" href="Wappen.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -24,7 +31,15 @@
         
         <header class="bg-stone-900 text-stone-200 p-6 shadow-md border-b border-stone-800 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-green-900 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
-            <h1 class="text-3xl font-black tracking-tighter mb-1 text-stone-100">OPERATION: <span class="text-green-600">WC '26</span></h1>
+            
+            <div class="absolute top-6 right-6 flex items-center gap-3 z-20">
+                <button onclick="window.location.reload()" class="text-stone-400 hover:text-white transition-colors p-2 bg-stone-800 rounded-full border border-stone-700 shadow-md focus:outline-none focus:ring-2 focus:ring-green-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+                <img src="Wappen.png" alt="Logo" class="w-10 h-10 object-contain drop-shadow-lg">
+            </div>
+
+            <h1 class="text-3xl font-black tracking-tighter mb-1 text-stone-100 pr-24">OPERATION: <br/><span class="text-green-600">WC '26</span></h1>
             <p class="text-stone-500 text-xs tracking-widest uppercase font-bold">Company Prediction Network</p>
             <div class="mt-6 flex justify-between items-end relative z-10">
                 <div>
@@ -52,15 +67,8 @@
             </div>
 
             <div id="view-tournament" class="hidden space-y-6">
-                <div class="flex justify-center mb-4 bg-stone-900 border border-stone-800 rounded-lg p-1 max-w-xs mx-auto shadow-inner">
-                    <button id="btn-groups" onclick="setTournamentMode('groups')" class="w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider">Group Standings</button>
-                    <button id="btn-bracket" onclick="setTournamentMode('bracket')" class="w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider">Live Bracket</button>
-                </div>
                 <div id="tournament-groups" class="space-y-6">
                     <p class="text-center text-stone-600 text-sm font-mono">Standings will be generated here upon deployment.</p>
-                </div>
-                <div id="tournament-bracket" class="hidden space-y-4">
-                    <p class="text-center text-stone-600 text-sm font-mono">Round of 32 Matchups (Live simulation offline)</p>
                 </div>
             </div>
 
@@ -102,7 +110,7 @@
                     <ul class="list-disc pl-5 space-y-3 text-stone-400 text-sm">
                         <li>Participation in this prediction game is strictly voluntary.</li>
                         <li>Each operative is only allowed one single account.</li>
-                        <li><strong>Match Deadlines:</strong> All predictions must be submitted before the official kickoff. Late entries will be rejected.</li>
+                        <li><strong>Match Deadlines:</strong> All predictions must be submitted before the official kickoff. Late entries will be rejected by the system automatically.</li>
                         <li><strong>Bonus Deadlines:</strong> Bonus parameters must be locked in before the official start.</li>
                         <li><strong>Regular Time Only:</strong> Predictions apply exclusively to regular playing time (90m + stoppage). Extra time and penalties are ignored.</li>
                     </ul>
@@ -132,6 +140,7 @@
         <div class="bg-stone-900 border border-stone-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
             <div class="p-6 bg-stone-950 text-stone-100 text-center relative border-b border-stone-800">
                 <button onclick="closeAnnouncementModal()" class="absolute top-3 right-4 text-stone-500 hover:text-stone-100 font-bold text-2xl leading-none transition-colors">&times;</button>
+                <div class="text-4xl mb-2">⚠️</div>
                 <h2 id="announcement-title" class="text-xl font-black tracking-widest uppercase text-green-500">System Alert</h2>
             </div>
             <div class="p-6 bg-stone-900 text-center">
@@ -345,7 +354,6 @@
                 if (!activeDate || !dates.includes(activeDate)) activeDate = dates[0];
 
                 dates.forEach(dateStr => {
-                    // Datum zur sicheren Anzeige umwandeln (12:00 UTC verhindert Datumsverschiebung)
                     const btnDate = new Date(`${dateStr}T12:00:00Z`); 
                     const shortDay = btnDate.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
                     const shortDate = btnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -400,10 +408,15 @@
                  listContainer.innerHTML = '<p class="text-stone-600 text-center text-sm font-mono mt-8">No matches found in this sector.</p>';
             }
 
+            // Aktuelle Zeit für den Deadline-Check
+            const now = new Date();
+
             filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
                 
-                // Litauische Zeitzone (24h Format)
+                // Prüfen ob Spiel in der Vergangenheit liegt (Kickoff-Zeit <= Aktuelle Zeit)
+                const isPast = new Date(match.kickoff) <= now;
+                
                 const matchTime = new Date(match.kickoff).toLocaleTimeString('en-US', { 
                     hour: '2-digit', 
                     minute: '2-digit', 
@@ -416,12 +429,25 @@
 
                 const card = document.createElement('div');
                 card.className = 'bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden';
-                const tipStatusStyle = pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700';
+                
+                // Grauer Balken wenn Spiel vorbei, sonst reguläre Farben
+                const tipStatusStyle = isPast ? 'border-l-4 border-l-stone-600 opacity-80' : (pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700');
                 card.classList.add(...tipStatusStyle.split(' '));
+
+                // Dropdowns deaktivieren, wenn in der Vergangenheit
+                const selectDisabledAttr = isPast ? 'disabled' : '';
+                const selectClassExtra = isPast ? 'opacity-50 cursor-not-allowed' : '';
+
+                let buttonHtml = '';
+                if (isPast) {
+                    buttonHtml = `<button disabled class="w-full bg-stone-950 text-stone-600 font-bold py-2.5 rounded-lg border border-stone-800 text-xs uppercase tracking-widest cursor-not-allowed">Match Locked</button>`;
+                } else {
+                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Coordinates' : 'Lock Coordinates'}</button>`;
+                }
 
                 card.innerHTML = `
                     <div class="text-[10px] text-stone-500 mb-3 text-center border-b border-stone-800 pb-2 uppercase tracking-widest font-bold">
-                        <span class="text-stone-300">${matchTime}</span> • ${match.venue || 'LOCATION TBD'}
+                        <span class="${isPast ? 'text-stone-500' : 'text-stone-300'}">${matchTime}</span> • ${match.venue || 'LOCATION TBD'}
                     </div>
                     <div class="flex items-center justify-between mb-4 mt-1">
                         <div class="w-[35%] flex items-center justify-end gap-2 pr-1">
@@ -429,18 +455,16 @@
                             ${homeFlag}
                         </div>
                         <div class="w-[30%] flex justify-center items-center gap-1">
-                            <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none" style="text-align-last: center;">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                            <select id="home-${match.id}" ${selectDisabledAttr} class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none ${selectClassExtra}" style="text-align-last: center;">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
                             <span class="font-black text-stone-600 mx-0.5">:</span>
-                            <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none" style="text-align-last: center;">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                            <select id="away-${match.id}" ${selectDisabledAttr} class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none ${selectClassExtra}" style="text-align-last: center;">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
                         </div>
                         <div class="w-[35%] flex items-center justify-start gap-2 pl-1">
                             ${awayFlag}
                             <span class="font-bold text-[15px] leading-tight text-left text-stone-200">${match.away_team}</span>
                         </div>
                     </div>
-                    <button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">
-                        ${pred ? 'Update Coordinates' : 'Lock Coordinates'}
-                    </button>
+                    ${buttonHtml}
                 `;
                 listContainer.appendChild(card);
             });
@@ -549,13 +573,6 @@
             
             if (t === 'leaderboard') fetchLeaderboard(); 
             if (t === 'tournament') fetchTournamentGroups(); 
-        }
-
-        function setTournamentMode(m) {
-            ['groups','bracket'].forEach(id => {
-                document.getElementById(`tournament-${id}`).classList[m===id ? 'remove' : 'add']('hidden');
-                document.getElementById(`btn-${id}`).className = m===id ? "w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider" : "w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider";
-            });
         }
 
         let allPlayersCached = [];
