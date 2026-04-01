@@ -410,18 +410,29 @@
             // Aktuelle Zeit für den Deadline-Check
             const now = new Date();
 
-            filteredMatches.forEach(match => {
+                        filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
-                
-                // Prüfen ob Spiel in der Vergangenheit liegt (Kickoff-Zeit <= Aktuelle Zeit)
                 const isPast = new Date(match.kickoff) <= now;
                 
-                const matchTime = new Date(match.kickoff).toLocaleTimeString('en-US', { 
+                const kickoffDate = new Date(match.kickoff);
+                const timeString = kickoffDate.toLocaleTimeString('en-US', { 
                     hour: '2-digit', 
                     minute: '2-digit', 
                     hour12: false, 
                     timeZone: 'Europe/Vilnius' 
                 });
+                
+                // NEU: Datum hinzufügen, wenn wir in der Gruppen- oder K.O.-Ansicht sind
+                let displayDateTime = timeString;
+                if (matchFilterMode === 'group' || matchFilterMode === 'ko') {
+                    const dateString = kickoffDate.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        timeZone: 'Europe/Vilnius'
+                    });
+                    displayDateTime = `${dateString}, ${timeString}`; // z.B. "Thu, Jun 11, 22:00"
+                }
                 
                 const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
                 const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
@@ -429,11 +440,9 @@
                 const card = document.createElement('div');
                 card.className = 'bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden';
                 
-                // Grauer Balken wenn Spiel vorbei, sonst reguläre Farben
                 const tipStatusStyle = isPast ? 'border-l-4 border-l-stone-600 opacity-80' : (pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700');
                 card.classList.add(...tipStatusStyle.split(' '));
 
-                // Dropdowns deaktivieren, wenn in der Vergangenheit
                 const selectDisabledAttr = isPast ? 'disabled' : '';
                 const selectClassExtra = isPast ? 'opacity-50 cursor-not-allowed' : '';
 
@@ -441,12 +450,12 @@
                 if (isPast) {
                     buttonHtml = `<button disabled class="w-full bg-stone-950 text-stone-600 font-bold py-2.5 rounded-lg border border-stone-800 text-xs uppercase tracking-widest cursor-not-allowed">Match Locked</button>`;
                 } else {
-                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Prediction' : 'Lock Prediction'}</button>`;
+                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Coordinates' : 'Lock Coordinates'}</button>`;
                 }
 
                 card.innerHTML = `
                     <div class="text-[10px] text-stone-500 mb-3 text-center border-b border-stone-800 pb-2 uppercase tracking-widest font-bold">
-                        <span class="${isPast ? 'text-stone-500' : 'text-stone-300'}">${matchTime}</span> • ${match.venue || 'LOCATION TBD'}
+                        <span class="${isPast ? 'text-stone-500' : 'text-stone-300'}">${displayDateTime}</span> • ${match.venue || 'LOCATION TBD'}
                     </div>
                     <div class="flex items-center justify-between mb-4 mt-1">
                         <div class="w-[35%] flex items-center justify-end gap-2 pr-1">
