@@ -548,20 +548,29 @@
                 p_away: parseInt(a) 
             });
 
-            if (!error) {
-                // Den exakten Button über seine Funktion und Match-ID im Dokument suchen
+                        if (!error) {
+                // NEU: Wir updaten das Kurzzeitgedächtnis der App sofort!
+                const existingTip = currentPredictions.find(p => p.match_id === matchId);
+                if (existingTip) {
+                    existingTip.home_pred = parseInt(h);
+                    existingTip.away_pred = parseInt(a);
+                } else {
+                    currentPredictions.push({ match_id: matchId, home_pred: parseInt(h), away_pred: parseInt(a), points_earned: 0 });
+                }
+
+                // Button Styling (wie bisher)
                 const btn = document.querySelector(`button[onclick="savePrediction(${matchId})"]`);
-                
                 if (btn) {
-                    btn.innerText = '✓'; 
+                    btn.innerText = 'LOCKED ✓'; 
                     btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
                     
                     setTimeout(() => { 
-                        btn.innerText = 'Update Predictions'; 
+                        btn.innerText = 'Update Coordinates'; 
                         btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; 
                     }, 2000);
                 }
             } else {
+
                 console.error("Datenbank-Fehler beim Speichern:", error);
                 alert('Secure uplink failed. Cannot save prediction.');
             }
@@ -723,6 +732,74 @@
 
 
         authenticateUser();
+
+                // ==========================================
+        // TACTICAL LIVE RADAR (Full Identity & Match Sync)
+        // ==========================================
+        setInterval(async () => {
+            if (!currentPlayerId || !currentPassphrase) return;
+
+            // Führe alle Abfragen parallel aus für maximale Geschwindigkeit
+            const [matchesRes, predRes, playerRes] = await Promise.all([
+                supabaseClient.from('matches').select('*').order('kickoff', { ascending: true }),
+                supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId),
+                supabaseClient.rpc('login_operative', { p_secret: currentPassphrase })
+            ]);
+
+            let needsUIRefresh = false;
+
+            // 1. Check auf neue Spielstände/Status
+            if (!matchesRes.error && matchesRes.data) {
+                const hasMatchUpdate = matchesRes.data.some((newM, i) => {
+                    const oldM = allMatchesCached[i];
+                    return oldM && (oldM.status !== newM.status || oldM.home_score !== newM.home_score || oldM.away_score !== newM.away_score);
+                });
+                if (hasMatchUpdate) {
+                    allMatchesCached = matchesRes.data;
+                    needsUIRefresh = true;
+                }
+            }
+
+            // 2. Check auf neu berechnete Punkte (Deine Tipps)
+            if (!predRes.error && predRes.data) {
+                const hasPointsUpdate = predRes.data.some(newP => {
+                    const oldP = currentPredictions.find(p => p.match_id === newP.match_id);
+                    return oldP && oldP.points_earned !== newP.points_earned;
+                });
+                if (hasPointsUpdate) {
+                    currentPredictions = predRes.data;
+                    needsUIRefresh = true;
+                }
+            }
+
+            // 3. Check auf neuen Gesamt-Score & Rang (Leaderboard)
+            if (!playerRes.error && playerRes.data && playerRes.data[0]) {
+                const newPlayerData = playerRes.data[0];
+                const scoreChanged = document.getElementById('user-score').innerText !== newPlayerData.score.toString();
+                
+                if (scoreChanged) {
+                    // Update Header
+                    document.getElementById('user-score').innerText = newPlayerData.score;
+                    // Wenn wir gerade im Ranks-Tab sind, müssen wir auch das Leaderboard neu laden
+                    if (!document.getElementById('ranks-view').classList.contains('hidden')) {
+                        await fetchLeaderboard(); // Lädt die allPlayersCached neu
+                    }
+                    needsUIRefresh = true;
+                }
+            }
+
+            // Wenn sich irgendetwas Wesentliches geändert hat -> UI neu zeichnen
+            if (needsUIRefresh) {
+                if (!document.getElementById('matches-view').classList.contains('hidden')) {
+                    renderMatches();
+                }
+                if (!document.getElementById('ranks-view').classList.contains('hidden')) {
+                    renderCurrentLeaderboardView();
+                }
+            }
+
+        }, 60000); // 60-Sekunden-Takt
+
     </script>
 </body>
 </html>
