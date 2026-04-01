@@ -417,72 +417,112 @@
             // Aktuelle Zeit für den Deadline-Check
             const now = new Date();
 
-                        filteredMatches.forEach(match => {
+                                    filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
                 const isPast = new Date(match.kickoff) <= now;
                 
                 const kickoffDate = new Date(match.kickoff);
-                const timeString = kickoffDate.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    hour12: false, 
-                    timeZone: 'Europe/Vilnius' 
-                });
+                const timeString = kickoffDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Vilnius' });
                 
-                // NEU: Datum hinzufügen, wenn wir in der Gruppen- oder K.O.-Ansicht sind
                 let displayDateTime = timeString;
                 if (matchFilterMode === 'group' || matchFilterMode === 'ko') {
-                    const dateString = kickoffDate.toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        timeZone: 'Europe/Vilnius'
-                    });
-                    displayDateTime = `${dateString}, ${timeString}`; // z.B. "Thu, Jun 11, 22:00"
+                    displayDateTime = `${kickoffDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Europe/Vilnius' })}, ${timeString}`;
                 }
                 
                 const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
                 const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
 
-                const card = document.createElement('div');
-                card.className = 'bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden';
-                
-                const tipStatusStyle = isPast ? 'border-l-4 border-l-stone-600 opacity-80' : (pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700');
-                card.classList.add(...tipStatusStyle.split(' '));
+                let statusBadge = '';
+                let middleContent = '';
+                let tipFooter = '';
+                let actionButton = '';
+                let cardBorder = 'border-l-4 border-l-stone-700';
 
-                const selectDisabledAttr = isPast ? 'disabled' : '';
-                const selectClassExtra = isPast ? 'opacity-50 cursor-not-allowed' : '';
-
-                let buttonHtml = '';
+                // WENN DAS SPIEL BEREITS BEGONNEN HAT ODER VORBEI IST
                 if (isPast) {
-                    buttonHtml = `<button disabled class="w-full bg-stone-950 text-stone-600 font-bold py-2.5 rounded-lg border border-stone-800 text-xs uppercase tracking-widest cursor-not-allowed">Match Locked</button>`;
+                    const realHome = match.home_score !== null ? match.home_score : '-';
+                    const realAway = match.away_score !== null ? match.away_score : '-';
+
+                    // 1. Status Badge Logik
+                    if (match.status === 'IN_PLAY' || match.status === 'PAUSED') {
+                        statusBadge = `<span class="text-red-500 font-black flex items-center gap-1"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> LIVE</span>`;
+                        cardBorder = 'border-l-4 border-l-red-600';
+                    } else if (match.status === 'FINISHED') {
+                        // Da unser Default für points_earned 0 ist, nehmen wir an: Wenn das Spiel FINISHED ist, ist es in Kürze berechnet
+                        statusBadge = `<span class="text-green-500 font-black flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> OFFICIAL</span>`;
+                        cardBorder = 'border-l-4 border-l-stone-600';
+                    } else {
+                        statusBadge = `<span class="text-amber-500 font-bold flex items-center gap-1 animate-pulse">CALCULATING...</span>`;
+                        cardBorder = 'border-l-4 border-l-amber-600';
+                    }
+
+                    // 2. Das echte Ergebnis in der Mitte
+                    middleContent = `<div class="text-3xl font-black text-stone-100 tracking-widest">${realHome} <span class="text-stone-600">:</span> ${realAway}</div>`;
+
+                    // 3. Was hat der Nutzer getippt? (Footer)
+                    if (pred) {
+                        let ptsBadge = '';
+                        if (match.status === 'FINISHED') {
+                            let ptColor = pred.points_earned === 3 ? 'bg-amber-500 text-stone-900' : (pred.points_earned === 1 ? 'bg-green-600 text-white' : 'bg-stone-700 text-stone-400');
+                            ptsBadge = `<span class="ml-2 px-2 py-0.5 rounded ${ptColor} text-[10px] font-black uppercase shadow-sm tracking-wider">+${pred.points_earned} PTS</span>`;
+                        }
+                        tipFooter = `
+                            <div class="mt-4 w-full bg-stone-950/80 p-2.5 rounded-lg border border-stone-800 flex justify-between items-center shadow-inner">
+                                <span class="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Your Intel:</span>
+                                <div class="flex items-center">
+                                    <span class="text-stone-300 font-black text-sm">${pred.home_pred} : ${pred.away_pred}</span>
+                                    ${ptsBadge}
+                                </div>
+                            </div>`;
+                    } else {
+                        tipFooter = `
+                            <div class="mt-4 w-full bg-stone-950/80 p-2.5 rounded-lg border border-red-900/30 flex justify-center items-center shadow-inner">
+                                <span class="text-[10px] font-bold text-red-500/70 uppercase tracking-widest">NO INTEL SUBMITTED (0 PTS)</span>
+                            </div>`;
+                    }
+
+                // WENN DAS SPIEL IN DER ZUKUNFT LIEGT
                 } else {
-                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Prediction' : 'Lock Prediction'}</button>`;
+                    statusBadge = `<span class="text-stone-500 font-bold">SCHEDULED</span>`;
+                    cardBorder = pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700';
+                    
+                    middleContent = `
+                        <select id="home-${match.id}" class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none" style="text-align-last: center;">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                        <span class="font-black text-stone-600 mx-0.5">:</span>
+                        <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none" style="text-align-last: center;">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                    `;
+
+                    actionButton = `<button onclick="savePrediction(${match.id})" class="mt-4 w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Coordinates' : 'Lock Coordinates'}</button>`;
                 }
 
+                // KARTE ZUSAMMENBAUEN
+                const card = document.createElement('div');
+                card.className = `bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden ${cardBorder} transition-all`;
+                
                 card.innerHTML = `
-                    <div class="text-[10px] text-stone-500 mb-3 text-center border-b border-stone-800 pb-2 uppercase tracking-widest font-bold">
-                        <span class="${isPast ? 'text-stone-500' : 'text-stone-300'}">${displayDateTime}</span> • ${match.venue || 'LOCATION TBD'}
+                    <div class="text-[10px] mb-3 flex justify-between items-center border-b border-stone-800 pb-2 uppercase tracking-widest">
+                        <span class="${isPast ? 'text-stone-500 font-bold' : 'text-stone-300 font-black'}">${displayDateTime}</span>
+                        ${statusBadge}
                     </div>
-                    <div class="flex items-center justify-between mb-4 mt-1">
+                    <div class="flex items-center justify-between mt-1">
                         <div class="w-[35%] flex items-center justify-end gap-2 pr-1">
                             <span class="font-bold text-[15px] leading-tight text-right text-stone-200">${match.home_team}</span>
                             ${homeFlag}
                         </div>
                         <div class="w-[30%] flex justify-center items-center gap-1">
-                            <select id="home-${match.id}" ${selectDisabledAttr} class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none ${selectClassExtra}" style="text-align-last: center;">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
-                            <span class="font-black text-stone-600 mx-0.5">:</span>
-                            <select id="away-${match.id}" ${selectDisabledAttr} class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none ${selectClassExtra}" style="text-align-last: center;">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                            ${middleContent}
                         </div>
                         <div class="w-[35%] flex items-center justify-start gap-2 pl-1">
                             ${awayFlag}
                             <span class="font-bold text-[15px] leading-tight text-left text-stone-200">${match.away_team}</span>
                         </div>
                     </div>
-                    ${buttonHtml}
+                    ${actionButton}
+                    ${tipFooter}
                 `;
                 listContainer.appendChild(card);
             });
+
             
             vm.appendChild(listContainer);
 
