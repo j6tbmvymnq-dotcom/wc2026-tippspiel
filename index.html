@@ -744,6 +744,80 @@
 
         authenticateUser();
 
+
+                // ==========================================
+        // SYSTEM TELEMETRY (Stats for Nerds)
+        // ==========================================
+        async function toggleTelemetry() {
+            const panel = document.getElementById('telemetry-panel');
+            
+            // Toggle Sichtbarkeit
+            if (!panel.classList.contains('hidden')) {
+                panel.classList.add('hidden');
+                return;
+            }
+            
+            panel.classList.remove('hidden');
+            panel.innerHTML = '<span class="text-[10px] text-stone-500 font-mono uppercase tracking-widest animate-pulse">Establishing secure uplink... fetching telemetry...</span>';
+
+            try {
+                // Parallele High-Speed Abfrage aller Metriken
+                const [predCountRes, opsCountRes, lastPredRes, lastApiRes] = await Promise.all([
+                    supabaseClient.from('predictions').select('id', { count: 'exact', head: true }),
+                    supabaseClient.from('players').select('id', { count: 'exact', head: true }),
+                    supabaseClient.from('predictions').select('created_at').order('created_at', { ascending: false }).limit(1),
+                    // Nimmt den zuletzt aktualisierten Datensatz aus der matches Tabelle
+                    supabaseClient.from('matches').select('updated_at').order('updated_at', { ascending: false }).limit(1) 
+                ]);
+
+                const totalPreds = predCountRes.count || 0;
+                const totalOps = opsCountRes.count || 0;
+
+                // Zeit-Formatierung auf Litauen (Europe/Vilnius)
+                const formatTime = (isoString) => {
+                    if (!isoString) return 'NO SIGNAL';
+                    return new Date(isoString).toLocaleString('en-US', { 
+                        timeZone: 'Europe/Vilnius', 
+                        month: 'short', 
+                        day: '2-digit', 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false 
+                    });
+                };
+
+                const lastPredTime = (lastPredRes.data && lastPredRes.data.length > 0) ? formatTime(lastPredRes.data[0].created_at) : 'NO SIGNAL';
+                const lastApiTime = (lastApiRes.data && lastApiRes.data.length > 0) ? formatTime(lastApiRes.data[0].updated_at) : 'NO SIGNAL';
+
+                // Rendern des Dashboards
+                panel.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] uppercase tracking-widest font-mono text-stone-400">
+                        <div class="bg-stone-900/50 p-2 rounded border border-stone-800/50 flex justify-between items-center">
+                            <span class="text-stone-500">Total Intel Locked:</span>
+                            <span class="text-green-500 font-black text-xs">${totalPreds}</span>
+                        </div>
+                        <div class="bg-stone-900/50 p-2 rounded border border-stone-800/50 flex justify-between items-center">
+                            <span class="text-stone-500">Active Operatives:</span>
+                            <span class="text-green-500 font-black text-xs">${totalOps}</span>
+                        </div>
+                        <div class="bg-stone-900/50 p-2 rounded border border-stone-800/50 flex justify-between items-center">
+                            <span class="text-stone-500">Last Intel Rcvd:</span>
+                            <span class="text-stone-300 font-bold">${lastPredTime}</span>
+                        </div>
+                        <div class="bg-stone-900/50 p-2 rounded border border-stone-800/50 flex justify-between items-center">
+                            <span class="text-stone-500">Last API Sync:</span>
+                            <span class="text-stone-300 font-bold">${lastApiTime}</span>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error(err);
+                panel.innerHTML = '<span class="text-[10px] text-red-500 font-mono uppercase tracking-widest">TELEMETRY FAILED. CHECK CONSOLE.</span>';
+            }
+        }
+
+
                 // ==========================================
         // TACTICAL LIVE RADAR (Full Identity & Match Sync)
         // ==========================================
