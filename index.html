@@ -177,13 +177,20 @@
         let currentMatches = [];
         let currentPredictions = [];
 
+        let currentPassphrase = null; // NEU: Wir merken uns die Passphrase für spätere Speicher-Aktionen
+
         async function authenticateUser() {
             const urlParams = new URLSearchParams(window.location.search);
             const secretKey = urlParams.get('key');
             if (!secretKey) return document.getElementById('error-screen').classList.remove('hidden');
-            const { data: player, error } = await supabaseClient.from('players').select('*').eq('passphrase', secretKey).single();
-            if (error || !player) return document.getElementById('error-screen').classList.remove('hidden');
-            loadDashboard(player);
+            
+            // NEU: Wir nutzen den sicheren RPC-Login
+            const { data: players, error } = await supabaseClient.rpc('login_operative', { p_secret: secretKey });
+            
+            if (error || !players || players.length === 0) return document.getElementById('error-screen').classList.remove('hidden');
+            
+            currentPassphrase = secretKey; // Passphrase für die Session speichern
+            loadDashboard(players[0]); // Das Array entpacken
         }
 
         function loadDashboard(player) {
@@ -450,7 +457,7 @@
                 if (isPast) {
                     buttonHtml = `<button disabled class="w-full bg-stone-950 text-stone-600 font-bold py-2.5 rounded-lg border border-stone-800 text-xs uppercase tracking-widest cursor-not-allowed">Match Locked</button>`;
                 } else {
-                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Coordinates' : 'Lock Coordinates'}</button>`;
+                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Prediction' : 'Lock Prediction'}</button>`;
                 }
 
                 card.innerHTML = `
@@ -485,15 +492,38 @@
             }, 10);
         }
 
-        async function savePrediction(matchId) {
+                async function savePrediction(matchId) {
             const h = document.getElementById(`home-${matchId}`).value;
             const a = document.getElementById(`away-${matchId}`).value;
-            if (h === '' || a === '') return alert('Please input a valid prediction (score)!');
-            const { error } = await supabaseClient.from('predictions').upsert({ player_id: currentPlayerId, match_id: matchId, home_pred: parseInt(h), away_pred: parseInt(a) }, { onConflict: 'player_id, match_id' });
+            
+            if (h === '' || a === '') {
+                return alert('Please input valid prediction (score)!');
+            }
+            
+            // Wir werfen den Tipp inkl. geheimer Passphrase durch den sicheren Briefschlitz
+            const { error } = await supabaseClient.rpc('save_secure_prediction', { 
+                p_secret: currentPassphrase, 
+                p_match_id: matchId, 
+                p_home: parseInt(h), 
+                p_away: parseInt(a) 
+            });
+
             if (!error) {
-                const btn = event.target;
-                btn.innerText = 'LOCKED ✓'; btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
-                setTimeout(() => { btn.innerText = 'Update Prediction'; btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; }, 2000);
+                // Den exakten Button über seine Funktion und Match-ID im Dokument suchen
+                const btn = document.querySelector(`button[onclick="savePrediction(${matchId})"]`);
+                
+                if (btn) {
+                    btn.innerText = '✓'; 
+                    btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
+                    
+                    setTimeout(() => { 
+                        btn.innerText = 'Update Predictions'; 
+                        btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; 
+                    }, 2000);
+                }
+            } else {
+                console.error("Datenbank-Fehler beim Speichern:", error);
+                alert('Secure uplink failed. Cannot save prediction.');
             }
         }
 
