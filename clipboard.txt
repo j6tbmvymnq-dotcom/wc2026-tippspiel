@@ -1,0 +1,66 @@
+            filteredMatches.forEach(match => {
+                const pred = currentPredictions.find(p => p.match_id === match.id);
+                const isPast = new Date(match.kickoff) <= now;
+                
+                const kickoffDate = new Date(match.kickoff);
+                const timeString = kickoffDate.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: false, 
+                    timeZone: 'Europe/Vilnius' 
+                });
+                
+                // NEU: Datum hinzufügen, wenn wir in der Gruppen- oder K.O.-Ansicht sind
+                let displayDateTime = timeString;
+                if (matchFilterMode === 'group' || matchFilterMode === 'ko') {
+                    const dateString = kickoffDate.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        timeZone: 'Europe/Vilnius'
+                    });
+                    displayDateTime = `${dateString}, ${timeString}`; // z.B. "Thu, Jun 11, 22:00"
+                }
+                
+                const homeFlag = match.home_logo ? `<img src="${match.home_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
+                const awayFlag = match.away_logo ? `<img src="${match.away_logo}" alt="Flag" class="w-6 h-6 object-contain shadow-sm rounded-sm">` : '';
+
+                const card = document.createElement('div');
+                card.className = 'bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden';
+                
+                const tipStatusStyle = isPast ? 'border-l-4 border-l-stone-600 opacity-80' : (pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700');
+                card.classList.add(...tipStatusStyle.split(' '));
+
+                const selectDisabledAttr = isPast ? 'disabled' : '';
+                const selectClassExtra = isPast ? 'opacity-50 cursor-not-allowed' : '';
+
+                let buttonHtml = '';
+                if (isPast) {
+                    buttonHtml = `<button disabled class="w-full bg-stone-950 text-stone-600 font-bold py-2.5 rounded-lg border border-stone-800 text-xs uppercase tracking-widest cursor-not-allowed">Match Locked</button>`;
+                } else {
+                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Coordinates' : 'Lock Coordinates'}</button>`;
+                }
+
+                card.innerHTML = `
+                    <div class="text-[10px] text-stone-500 mb-3 text-center border-b border-stone-800 pb-2 uppercase tracking-widest font-bold">
+                        <span class="${isPast ? 'text-stone-500' : 'text-stone-300'}">${displayDateTime}</span> • ${match.venue || 'LOCATION TBD'}
+                    </div>
+                    <div class="flex items-center justify-between mb-4 mt-1">
+                        <div class="w-[35%] flex items-center justify-end gap-2 pr-1">
+                            <span class="font-bold text-[15px] leading-tight text-right text-stone-200">${match.home_team}</span>
+                            ${homeFlag}
+                        </div>
+                        <div class="w-[30%] flex justify-center items-center gap-1">
+                            <select id="home-${match.id}" ${selectDisabledAttr} class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none ${selectClassExtra}" style="text-align-last: center;">${generateScoreOptions(pred ? pred.home_pred : '')}</select>
+                            <span class="font-black text-stone-600 mx-0.5">:</span>
+                            <select id="away-${match.id}" ${selectDisabledAttr} class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none ${selectClassExtra}" style="text-align-last: center;">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
+                        </div>
+                        <div class="w-[35%] flex items-center justify-start gap-2 pl-1">
+                            ${awayFlag}
+                            <span class="font-bold text-[15px] leading-tight text-left text-stone-200">${match.away_team}</span>
+                        </div>
+                    </div>
+                    ${buttonHtml}
+                `;
+                listContainer.appendChild(card);
+            });
