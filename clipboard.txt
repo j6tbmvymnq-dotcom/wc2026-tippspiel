@@ -1,22 +1,24 @@
-        async function savePrediction(matchId) {
-            const h = document.getElementById(`home-${matchId}`).value;
-            const a = document.getElementById(`away-${matchId}`).value;
-            if (h === '' || a === '') return alert('Please input valid coordinates (score)!');
-            
-            // NEU: Wir werfen den Tipp inkl. geheimer Passphrase durch den Briefschlitz
-            const { error } = await supabaseClient.rpc('save_secure_prediction', { 
-                p_secret: currentPassphrase, 
-                p_match_id: matchId, 
-                p_home: parseInt(h), 
-                p_away: parseInt(a) 
-            });
-
-            if (!error) {
-                // ... Rest bleibt gleich (Buttons werden grün etc.)
-                const btn = event.target;
-                btn.innerText = 'LOCKED ✓'; btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
-                setTimeout(() => { btn.innerText = 'Update Coordinates'; btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; }, 2000);
-            } else {
-                alert('Secure uplink failed. Cannot save prediction.');
+        async function saveBonusAnswers() {
+            let hasError = false;
+            for (const q of unansweredQuestions) {
+                const val = document.getElementById(`answer-${q.id}`).value; 
+                if (val !== '') {
+                    // NEU: Jede Antwort wird sicher einzeln übergeben
+                    const { error } = await supabaseClient.rpc('save_secure_bonus', { 
+                        p_secret: currentPassphrase, 
+                        p_question_id: q.id, 
+                        p_answer: val 
+                    });
+                    if (error) hasError = true;
+                }
             }
+            
+            if (hasError) {
+                console.error("System Error saving Intel");
+                alert("Fehler beim Sichern der Daten! Bitte lade die Seite neu.");
+                return;
+            }
+
+            closeBonusModal();
+            checkAndShowBonusQuestions(); 
         }
