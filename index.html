@@ -441,7 +441,7 @@
                 if (isPast) {
                     buttonHtml = `<button disabled class="w-full bg-stone-950 text-stone-600 font-bold py-2.5 rounded-lg border border-stone-800 text-xs uppercase tracking-widest cursor-not-allowed">Match Locked</button>`;
                 } else {
-                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Coordinates' : 'Lock Coordinates'}</button>`;
+                    buttonHtml = `<button onclick="savePrediction(${match.id})" class="w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Prediction' : 'Lock Prediction'}</button>`;
                 }
 
                 card.innerHTML = `
@@ -479,12 +479,12 @@
         async function savePrediction(matchId) {
             const h = document.getElementById(`home-${matchId}`).value;
             const a = document.getElementById(`away-${matchId}`).value;
-            if (h === '' || a === '') return alert('Please input valid coordinates (score)!');
+            if (h === '' || a === '') return alert('Please input a valid prediction (score)!');
             const { error } = await supabaseClient.from('predictions').upsert({ player_id: currentPlayerId, match_id: matchId, home_pred: parseInt(h), away_pred: parseInt(a) }, { onConflict: 'player_id, match_id' });
             if (!error) {
                 const btn = event.target;
                 btn.innerText = 'LOCKED ✓'; btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
-                setTimeout(() => { btn.innerText = 'Update Coordinates'; btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; }, 2000);
+                setTimeout(() => { btn.innerText = 'Update Prediction'; btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; }, 2000);
             }
         }
 
@@ -538,7 +538,7 @@
                 container.innerHTML += `
                     <div class="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden shadow-md mb-6">
                         <div class="bg-stone-950 p-3 border-b border-stone-800 font-black text-stone-300 flex justify-between items-center uppercase tracking-widest text-sm">
-                            <span>Sector ${groupId}</span>
+                            <span>${groupId}</span>
                             <span class="text-[10px] font-bold text-stone-600">P=Played, Pts=Points</span>
                         </div>
                         <table class="w-full text-left border-collapse text-sm table-fixed">
