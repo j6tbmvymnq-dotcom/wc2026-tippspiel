@@ -1,15 +1,22 @@
-        let currentPassphrase = null; // NEU: Wir merken uns die Passphrase für spätere Speicher-Aktionen
+        async function savePrediction(matchId) {
+            const h = document.getElementById(`home-${matchId}`).value;
+            const a = document.getElementById(`away-${matchId}`).value;
+            if (h === '' || a === '') return alert('Please input valid coordinates (score)!');
+            
+            // NEU: Wir werfen den Tipp inkl. geheimer Passphrase durch den Briefschlitz
+            const { error } = await supabaseClient.rpc('save_secure_prediction', { 
+                p_secret: currentPassphrase, 
+                p_match_id: matchId, 
+                p_home: parseInt(h), 
+                p_away: parseInt(a) 
+            });
 
-        async function authenticateUser() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const secretKey = urlParams.get('key');
-            if (!secretKey) return document.getElementById('error-screen').classList.remove('hidden');
-            
-            // NEU: Wir nutzen den sicheren RPC-Login
-            const { data: players, error } = await supabaseClient.rpc('login_operative', { p_secret: secretKey });
-            
-            if (error || !players || players.length === 0) return document.getElementById('error-screen').classList.remove('hidden');
-            
-            currentPassphrase = secretKey; // Passphrase für die Session speichern
-            loadDashboard(players[0]); // Das Array entpacken
+            if (!error) {
+                // ... Rest bleibt gleich (Buttons werden grün etc.)
+                const btn = event.target;
+                btn.innerText = 'LOCKED ✓'; btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
+                setTimeout(() => { btn.innerText = 'Update Coordinates'; btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; }, 2000);
+            } else {
+                alert('Secure uplink failed. Cannot save prediction.');
+            }
         }
