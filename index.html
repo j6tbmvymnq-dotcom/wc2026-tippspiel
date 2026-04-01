@@ -468,7 +468,7 @@
                         }
                         tipFooter = `
                             <div class="mt-4 w-full bg-stone-950/80 p-2.5 rounded-lg border border-stone-800 flex justify-between items-center shadow-inner">
-                                <span class="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Your Intel:</span>
+                                <span class="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Your Prediction:</span>
                                 <div class="flex items-center">
                                     <span class="text-stone-300 font-black text-sm">${pred.home_pred} : ${pred.away_pred}</span>
                                     ${ptsBadge}
@@ -477,7 +477,7 @@
                     } else {
                         tipFooter = `
                             <div class="mt-4 w-full bg-stone-950/80 p-2.5 rounded-lg border border-red-900/30 flex justify-center items-center shadow-inner">
-                                <span class="text-[10px] font-bold text-red-500/70 uppercase tracking-widest">NO INTEL SUBMITTED (0 PTS)</span>
+                                <span class="text-[10px] font-bold text-red-500/70 uppercase tracking-widest">NO PREDICTION SUBMITTED (0 PTS)</span>
                             </div>`;
                     }
 
@@ -492,7 +492,7 @@
                         <select id="away-${match.id}" class="w-12 h-10 md:w-14 md:h-12 px-0 border border-stone-700 text-center rounded-lg font-black focus:border-green-500 appearance-none bg-stone-950 text-stone-100 outline-none" style="text-align-last: center;">${generateScoreOptions(pred ? pred.away_pred : '')}</select>
                     `;
 
-                    actionButton = `<button onclick="savePrediction(${match.id})" class="mt-4 w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Coordinates' : 'Lock Coordinates'}</button>`;
+                    actionButton = `<button onclick="savePrediction(${match.id})" class="mt-4 w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Prediction' : 'Lock Prediction'}</button>`;
                 }
 
                 // KARTE ZUSAMMENBAUEN
