@@ -562,11 +562,11 @@
                 const btn = document.querySelector(`button[onclick="savePrediction(${matchId})"]`);
                 if (btn) {
                     btn.innerText = '✓'; 
-                    btn.className = 'w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
+                    btn.className = 'mt-4 w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
                     
                     setTimeout(() => { 
                         btn.innerText = 'Update Predictions'; 
-                        btn.className = 'w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; 
+                        btn.className = 'mt-4 w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; 
                     }, 2000);
                 }
             } else {
