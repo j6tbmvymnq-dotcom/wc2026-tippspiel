@@ -45,6 +45,7 @@
                 <div>
                     <p class="text-xs text-stone-500 mb-1 uppercase tracking-wider font-bold">User:</p>
                     <p id="user-nickname" class="text-lg font-black bg-stone-800 inline-block px-3 py-1 rounded-md border border-stone-700 text-green-500 shadow-inner"></p>
+                    <button id="btn-edit-bonus" onclick="openAllBonusModal()" class="hidden ml-3 bg-stone-800 text-stone-400 hover:text-green-400 text-[9px] px-2 py-1 rounded border border-stone-700 uppercase font-bold tracking-widest transition-colors shadow-sm">Edit BQ</button>
                 </div>
                 <div class="text-right">
                     <p class="text-xs text-stone-500 mb-1 uppercase tracking-wider font-bold">Total Score</p>
@@ -207,6 +208,13 @@
         function loadDashboard(player) {
             currentPlayerId = player.id;
             document.getElementById('user-nickname').textContent = player.nickname;
+                        // Zeige den BQ-Edit-Button nur, wenn das Turnier noch nicht angefangen hat
+            const bqDeadline = new Date('2026-06-11T21:00:00+02:00');
+            if (new Date() < bqDeadline) {
+                document.getElementById('btn-edit-bonus').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-edit-bonus').classList.add('hidden');
+            }
             document.getElementById('user-score').textContent = player.score;
             document.getElementById('loading-screen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
@@ -274,17 +282,71 @@
 
         function closeBonusModal() { document.getElementById('bonus-modal').classList.add('hidden'); }
 
+        function openAllBonusModal() {
+            const container = document.getElementById('bonus-questions-container');
+            container.innerHTML = '';
+            
+            // Wir rendern ALLE Bonusfragen
+            bonusQuestions.forEach(q => {
+                // Suchen, ob der Nutzer schon eine Antwort dafür gespeichert hat
+                const existingPred = currentBonusPredictions.find(p => p.question_id === q.id);
+                const currentAnswer = existingPred ? existingPred.answer : '';
+
+                const div = document.createElement('div');
+                div.className = 'mb-4';
+                div.innerHTML = `
+                    <label class="block text-[11px] font-bold text-stone-300 uppercase tracking-widest mb-1">${q.question}</label>
+                    <input type="text" id="answer-${q.id}" value="${currentAnswer}" placeholder="ENTER INTEL..." class="w-full bg-stone-950 border border-stone-700 p-3 rounded-lg text-stone-200 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 font-bold text-sm shadow-inner uppercase placeholder-stone-700">
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('bonus-modal').classList.remove('hidden');
+        }
+
+
         async function saveBonusAnswers() {
-            const answersToSave = [];
-            for (const q of unansweredQuestions) {
-                const val = document.getElementById(`answer-${q.id}`).value; 
-                if (val !== '') answersToSave.push({ player_id: currentPlayerId, question_id: q.id, answer: val });
+            // Wir suchen alle Eingabefelder im aktuellen Modal
+            const inputs = document.querySelectorAll('#bonus-questions-container input');
+            let hasError = false;
+            
+            for (const input of inputs) {
+                const qId = input.id.replace('answer-', '');
+                const val = input.value.trim().toUpperCase(); // Immer schön in Großbuchstaben
+                
+                if (val !== '') {
+                    // Durch den sicheren Briefschlitz schicken
+                    const { error } = await supabaseClient.rpc('save_secure_bonus', { 
+                        p_secret: currentPassphrase, 
+                        p_question_id: qId, 
+                        p_answer: val 
+                    });
+                    
+                    if (error) {
+                        hasError = true;
+                        console.error("DB Error:", error);
+                    } else {
+                        // Sofort in das Kurzzeitgedächtnis der App laden (damit man es beim nächsten Öffnen direkt sieht)
+                        let existing = currentBonusPredictions.find(p => p.question_id === qId);
+                        if (existing) {
+                            existing.answer = val;
+                        } else {
+                            currentBonusPredictions.push({ question_id: qId, answer: val, points_earned: 0 });
+                        }
+                    }
+                }
             }
-            if (answersToSave.length === 0) return closeBonusModal(); 
-            await supabaseClient.from('bonus_predictions').upsert(answersToSave);
+            
+            if (hasError) {
+                alert("Intel transmission failed (Database error or Deadline passed!).");
+                return;
+            }
+
             closeBonusModal();
+            // Nach dem Speichern den roten Zähler oben im Menü aktualisieren
             checkAndShowBonusQuestions(); 
         }
+
 
         // --- MATCHES LOGIC ---
         let matchFilterMode = 'date'; 
