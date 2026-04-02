@@ -3,34 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MN BG LTU - VAR Simulator</title>
+    <title>MN BG LTU - Director's VAR</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-stone-950 p-6 font-sans text-stone-300">
 
-    <div class="max-w-2xl mx-auto bg-stone-900 p-6 rounded-xl border border-amber-600 shadow-2xl">
-        <h1 class="text-2xl font-black mb-2 text-amber-500 uppercase tracking-tighter">VAR / Match Simulator</h1>
-        <p class="text-xs text-stone-500 uppercase tracking-widest mb-6">Force Match Results & Trigger Score Calculation</p>
+    <div class="max-w-2xl mx-auto bg-stone-900 p-6 rounded-xl border border-blue-900 shadow-2xl">
+        <h1 class="text-2xl font-black mb-1 text-blue-500 uppercase tracking-tighter">Live Match Director (VAR v2)</h1>
+        <p class="text-xs text-stone-500 uppercase tracking-widest mb-6">Full Control: Time Travel, Live Scores & Scoring</p>
 
         <div class="space-y-4 mb-6">
             <input type="text" id="dbUrl" class="w-full bg-stone-950 border border-stone-700 p-2 rounded text-stone-200 text-xs font-mono" placeholder="Supabase URL (https://...)">
             <input type="password" id="dbKey" class="w-full bg-stone-950 border border-stone-700 p-2 rounded text-stone-200 text-xs font-mono" placeholder="SERVICE_ROLE Key (eyJh...)">
-            <button onclick="loadMatches()" class="w-full bg-stone-800 border border-stone-700 text-stone-300 hover:text-white p-2 rounded font-bold text-xs uppercase transition-colors">1. Connect & Load Matches</button>
+            <button onclick="loadMatches()" class="w-full bg-stone-800 border border-stone-700 text-stone-300 hover:text-white p-2 rounded font-bold text-xs uppercase transition-colors">1. Connect & Load Targets</button>
         </div>
 
-        <div id="simulation-area" class="hidden space-y-4 p-4 border border-stone-800 rounded-lg bg-stone-950">
-            <select id="matchSelect" class="w-full bg-stone-900 border border-stone-700 p-2 rounded text-stone-200 text-xs font-bold"></select>
+        <div id="simulation-area" class="hidden space-y-4 p-5 border border-stone-800 rounded-lg bg-stone-950">
+            <select id="matchSelect" onchange="onMatchSelect()" class="w-full bg-stone-900 border border-stone-700 p-2 rounded text-stone-200 text-xs font-bold mb-4"></select>
             
-            <div class="flex items-center justify-center gap-4">
-                <input type="number" id="homeScore" class="w-16 bg-stone-900 border border-stone-700 p-2 rounded text-center text-xl font-black text-white" placeholder="0">
-                <span class="text-stone-500 font-black">:</span>
-                <input type="number" id="awayScore" class="w-16 bg-stone-900 border border-stone-700 p-2 rounded text-center text-xl font-black text-white" placeholder="0">
+            <!-- PHASE 1: PRE-MATCH -->
+            <div class="border-l-4 border-amber-500 pl-4 py-2">
+                <h3 class="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-2">Phase 1: Kickoff (Time Travel)</h3>
+                <button onclick="startMatch()" class="bg-stone-800 border border-amber-700 text-amber-500 hover:bg-amber-900 hover:text-white px-4 py-2 rounded font-bold text-xs uppercase transition-colors">Simulate Kickoff (Locks Predictions)</button>
+                <p class="text-[9px] text-stone-500 mt-1">Shifts kickoff time to the past to engage security lockdown.</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 mt-4">
-                <button onclick="simulateMatch()" class="bg-amber-600 text-white p-3 rounded font-black text-xs uppercase shadow-lg hover:bg-amber-500 transition-colors">2. Simulate Final Whistle</button>
-                <button onclick="resetMatch()" class="bg-stone-800 border border-stone-700 text-stone-500 p-3 rounded font-bold text-xs uppercase hover:text-white transition-colors">Undo / Reset Match</button>
+            <!-- PHASE 2: LIVE MATCH -->
+            <div class="border-l-4 border-red-600 pl-4 py-2 mt-4">
+                <h3 class="text-red-500 text-[10px] font-black uppercase tracking-widest mb-2">Phase 2: Live Events</h3>
+                <div class="flex items-center gap-3 mb-3">
+                    <select id="matchStatus" class="bg-stone-900 border border-stone-700 p-2 rounded text-stone-200 text-xs font-bold">
+                        <option value="TIMED">TIMED (Scheduled)</option>
+                        <option value="IN_PLAY">IN PLAY (Running)</option>
+                        <option value="PAUSED">PAUSED (Halftime)</option>
+                        <option value="FINISHED">FINISHED</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-4 mb-3">
+                    <input type="number" id="homeScore" class="w-16 bg-stone-900 border border-stone-700 p-2 rounded text-center text-xl font-black text-white" placeholder="0">
+                    <span class="text-stone-500 font-black">:</span>
+                    <input type="number" id="awayScore" class="w-16 bg-stone-900 border border-stone-700 p-2 rounded text-center text-xl font-black text-white" placeholder="0">
+                </div>
+                <button onclick="updateLiveState()" class="bg-stone-800 border border-red-900 text-red-500 hover:bg-red-900 hover:text-white px-4 py-2 rounded font-bold text-xs uppercase transition-colors">Push Live Update (No Points)</button>
+            </div>
+
+            <!-- PHASE 3 & 4: POST-MATCH -->
+            <div class="border-l-4 border-green-600 pl-4 py-2 mt-4">
+                <h3 class="text-green-500 text-[10px] font-black uppercase tracking-widest mb-2">Phase 3: Final Whistle</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="simulateFinal()" class="bg-green-700 text-white p-3 rounded font-black text-xs uppercase shadow-lg hover:bg-green-600 transition-colors">Calc Points & Finish</button>
+                    <button onclick="resetMatch()" class="bg-stone-800 border border-stone-700 text-stone-500 p-3 rounded font-bold text-[10px] uppercase hover:text-white transition-colors">Undo Everything</button>
+                </div>
             </div>
         </div>
 
@@ -41,12 +65,14 @@
 
     <script>
         let db = null;
+        let originalMatches = {}; // Unser Backup-Gedächtnis für die Zeitreise
 
         function log(msg, type='info') {
             const cons = document.getElementById('console');
             let color = 'text-stone-300';
             if(type === 'success') color = 'text-green-500 font-bold'; 
             if(type === 'warning') color = 'text-amber-500 font-bold';
+            if(type === 'error') color = 'text-red-500 font-bold';
             cons.innerHTML += `<span class="${color}">[${new Date().toLocaleTimeString()}] ${msg}</span><br>`;
             cons.scrollTop = cons.scrollHeight;
         }
@@ -59,46 +85,100 @@
             db = supabase.createClient(url, key);
             log('Connected via Service Role. Fetching matches...');
 
-            const { data, error } = await db.from('matches').select('id, home_team, away_team, status').order('kickoff', { ascending: true });
+            const { data, error } = await db.from('matches').select('*').order('kickoff', { ascending: true });
             
-            if (error) return log(`Error: ${error.message}`, 'warning');
+            if (error) return log(`Error: ${error.message}`, 'error');
             
             const select = document.getElementById('matchSelect');
             select.innerHTML = '';
             data.forEach(m => {
+                originalMatches[m.id] = m; // Wir speichern das Original (besonders die Anstoßzeit)
                 const opt = document.createElement('option');
                 opt.value = m.id;
-                opt.text = `${m.home_team} vs ${m.away_team} (${m.status})`;
+                opt.text = `${m.home_team} vs ${m.away_team} (Grp ${m.match_group}) - ${new Date(m.kickoff).toLocaleDateString()}`;
                 select.appendChild(opt);
             });
 
             document.getElementById('simulation-area').classList.remove('hidden');
-            log(`Loaded ${data.length} matches.`);
+            onMatchSelect();
+            log(`Loaded ${data.length} matches into Director Memory.`);
         }
 
-        async function simulateMatch() {
+        function onMatchSelect() {
+            const matchId = document.getElementById('matchSelect').value;
+            const m = originalMatches[matchId];
+            document.getElementById('matchStatus').value = m.status || 'TIMED';
+            document.getElementById('homeScore').value = m.home_score !== null ? m.home_score : '';
+            document.getElementById('awayScore').value = m.away_score !== null ? m.away_score : '';
+        }
+
+        // ==========================================
+        // PHASE 1: KICKOFF (TIME TRAVEL)
+        // ==========================================
+        async function startMatch() {
+            const matchId = document.getElementById('matchSelect').value;
+            log(`--- TRIGGERING LOCKDOWN FOR MATCH ${matchId} ---`, 'warning');
+            
+            // Wir drehen die Uhr auf 5 Minuten in die Vergangenheit
+            const pastDate = new Date(Date.now() - 5 * 60000).toISOString();
+            
+            const { error } = await db.from('matches').update({ 
+                kickoff: pastDate, 
+                status: 'IN_PLAY', 
+                home_score: 0, 
+                away_score: 0 
+            }).eq('id', matchId);
+
+            if (error) return log(`DB Error: ${error.message}`, 'error');
+
+            document.getElementById('matchStatus').value = 'IN_PLAY';
+            document.getElementById('homeScore').value = 0;
+            document.getElementById('awayScore').value = 0;
+
+            log('KICKOFF SIMULATED: Time shifted to past. Status IN_PLAY. Predictions are now globally locked!', 'success');
+        }
+
+        // ==========================================
+        // PHASE 2: LIVE EVENTS
+        // ==========================================
+        async function updateLiveState() {
+            const matchId = document.getElementById('matchSelect').value;
+            const status = document.getElementById('matchStatus').value;
+            const h = parseInt(document.getElementById('homeScore').value) || 0;
+            const a = parseInt(document.getElementById('awayScore').value) || 0;
+
+            log(`Pushing Live Update: Status=${status}, Score=${h}:${a}...`);
+            
+            const { error } = await db.from('matches').update({ 
+                status: status, 
+                home_score: h, 
+                away_score: a 
+            }).eq('id', matchId);
+
+            if (error) return log(`DB Error: ${error.message}`, 'error');
+            log('Live data broadcasted to all frontend clients.', 'success');
+        }
+
+        // ==========================================
+        // PHASE 3: FINAL WHISTLE & CALCULATION
+        // ==========================================
+        async function simulateFinal() {
             const matchId = document.getElementById('matchSelect').value;
             const homeScore = parseInt(document.getElementById('homeScore').value);
             const awayScore = parseInt(document.getElementById('awayScore').value);
 
-            if (isNaN(homeScore) || isNaN(awayScore)) return log('Please enter valid scores!', 'warning');
+            if (isNaN(homeScore) || isNaN(awayScore)) return log('Please enter valid scores first!', 'warning');
 
-            log(`--- SIMULATING MATCH ${matchId} AS FINISHED (${homeScore}:${awayScore}) ---`);
+            log(`--- SIMULATING FINAL WHISTLE & CALCULATING ---`, 'warning');
 
-            // 1. Update Match in DB
+            // 1. Update Match to FINISHED
             await db.from('matches').update({ status: 'FINISHED', home_score: homeScore, away_score: awayScore }).eq('id', matchId);
-            log('Match marked as FINISHED.');
+            document.getElementById('matchStatus').value = 'FINISHED';
 
-            // 2. Fetch predictions
+            // 2. Punkte berechnen
             const { data: predictions } = await db.from('predictions').select('*').eq('match_id', matchId).eq('points_earned', 0);
-            
-            if (!predictions || predictions.length === 0) {
-                return log('No pending predictions found for this match.');
-            }
+            if (!predictions || predictions.length === 0) return log('Match finished, but no open predictions to calculate found.');
 
-            log(`Found ${predictions.length} predictions to calculate...`);
-
-            // 3. Exact same logic as your Node.js Bot
             let exactCount = 0;
             let tendencyCount = 0;
 
@@ -111,30 +191,29 @@
                 else if (isTendency) { points = 1; tendencyCount++; }
 
                 if (points > 0) {
-                    // Update Prediction
                     await db.from('predictions').update({ points_earned: points }).eq('id', pred.id);
-                    // Update Player Score
                     const { data: player } = await db.from('players').select('score').eq('id', pred.player_id).single();
                     await db.from('players').update({ score: player.score + points }).eq('id', pred.player_id);
                 } else {
-                    // Even if 0 points, we mark it as processed (optional, but good for tracking)
                     await db.from('predictions').update({ points_earned: 0 }).eq('id', pred.id);
                 }
             }
 
             log(`CALCULATION COMPLETE: ${exactCount} Exact Hits (3pts), ${tendencyCount} Tendency Hits (1pt).`, 'success');
-            log('Open your App Dashboard to see the updated scores and leaderboard!');
         }
 
+        // ==========================================
+        // PHASE 4: UNDO / RESET
+        // ==========================================
         async function resetMatch() {
             const matchId = document.getElementById('matchSelect').value;
-            log(`--- RESETTING MATCH ${matchId} ---`, 'warning');
+            const orig = originalMatches[matchId];
+            log(`--- RESETTING MATCH ${matchId} TO FACTORY STATE ---`, 'error');
 
-            // 1. Get all predictions that earned points for this match
+            // 1. Punkte abziehen
             const { data: predictions } = await db.from('predictions').select('*').eq('match_id', matchId).gt('points_earned', 0);
-
             if (predictions && predictions.length > 0) {
-                log(`Subtracting points from ${predictions.length} players...`);
+                log(`Revoking points from ${predictions.length} players...`);
                 for (const pred of predictions) {
                     const { data: player } = await db.from('players').select('score').eq('id', pred.player_id).single();
                     await db.from('players').update({ score: player.score - pred.points_earned }).eq('id', pred.player_id);
@@ -142,9 +221,19 @@
                 }
             }
 
-            // 2. Set match back to scheduled
-            await db.from('matches').update({ status: 'TIMED', home_score: null, away_score: null }).eq('id', matchId);
-            log('Match reset to SCHEDULED. Points deducted.', 'success');
+            // 2. Match zurücksetzen (WICHTIG: Originale Anstoßzeit aus dem Gedächtnis laden!)
+            await db.from('matches').update({ 
+                status: 'TIMED', 
+                home_score: null, 
+                away_score: null, 
+                kickoff: orig.kickoff 
+            }).eq('id', matchId);
+
+            document.getElementById('matchStatus').value = 'TIMED';
+            document.getElementById('homeScore').value = '';
+            document.getElementById('awayScore').value = '';
+
+            log('MATCH RESET. Time travel reversed. Predictions unlocked.', 'success');
         }
     </script>
 </body>
