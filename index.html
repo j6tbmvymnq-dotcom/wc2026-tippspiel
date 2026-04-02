@@ -181,15 +181,16 @@
 
     <script>
         // --- 1. CONFIGURATION ---
-        const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co'; // <-- DEINE URL
+        const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; // <-- DEIN KEY
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentPlayerId = null;
         let currentMatches = [];
         let currentPredictions = [];
+        let currentBonusPredictions = [];
+        let currentPassphrase = null; 
 
-        let currentPassphrase = null; // NEU: Wir merken uns die Passphrase für spätere Speicher-Aktionen
 
         async function authenticateUser() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -257,15 +258,23 @@
         let unansweredQuestions = [];
 
         async function checkAndShowBonusQuestions() {
+            // Lade ALLE bisherigen Antworten aus der Datenbank ins Kurzzeitgedächtnis
+            const { data: existingAnswers } = await supabaseClient.from('bonus_predictions').select('*').eq('player_id', currentPlayerId);
+            currentBonusPredictions = existingAnswers || [];
+
+            // Sperre prüfen
             if (new Date() >= OPENING_MATCH_DATE) return;
-            const { data: existingAnswers } = await supabaseClient.from('bonus_predictions').select('question_id').eq('player_id', currentPlayerId);
-            const answeredIds = existingAnswers ? existingAnswers.map(ans => ans.question_id) : [];
+            
+            // Filtern, welche Fragen noch unbeantwortet sind
+            const answeredIds = currentBonusPredictions.map(ans => ans.question_id);
             unansweredQuestions = BONUS_QUESTIONS.filter(q => !answeredIds.includes(q.id));
+            
             if (unansweredQuestions.length > 0) {
                 renderBonusQuestions();
                 document.getElementById('bonus-modal').classList.remove('hidden');
             }
         }
+
 
         function renderBonusQuestions() {
             const container = document.getElementById('bonus-questions-container');
@@ -286,17 +295,25 @@
             const container = document.getElementById('bonus-questions-container');
             container.innerHTML = '';
             
-            // Wir rendern ALLE Bonusfragen
-            bonusQuestions.forEach(q => {
-                // Suchen, ob der Nutzer schon eine Antwort dafür gespeichert hat
+            // WICHTIG: BONUS_QUESTIONS groß geschrieben!
+            BONUS_QUESTIONS.forEach(q => {
                 const existingPred = currentBonusPredictions.find(p => p.question_id === q.id);
                 const currentAnswer = existingPred ? existingPred.answer : '';
 
+                // Dropdown Optionen bauen und gespeicherte Antwort vorauswählen
+                let optionsHtml = '<option value="" disabled selected>Select an option...</option>';
+                q.options.forEach(opt => { 
+                    const isSelected = currentAnswer === opt.toUpperCase() ? 'selected' : '';
+                    optionsHtml += `<option value="${opt.toUpperCase()}" ${isSelected}>${opt}</option>`; 
+                });
+
                 const div = document.createElement('div');
-                div.className = 'mb-4';
+                div.className = 'bg-stone-950 border border-stone-800 p-4 rounded-xl shadow-inner mb-4';
                 div.innerHTML = `
-                    <label class="block text-[11px] font-bold text-stone-300 uppercase tracking-widest mb-1">${q.question}</label>
-                    <input type="text" id="answer-${q.id}" value="${currentAnswer}" placeholder="ENTER INTEL..." class="w-full bg-stone-950 border border-stone-700 p-3 rounded-lg text-stone-200 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 font-bold text-sm shadow-inner uppercase placeholder-stone-700">
+                    <label class="block text-sm font-bold text-stone-300 mb-2 uppercase tracking-wide">${q.text}</label>
+                    <select id="answer-${q.id}" class="w-full border border-stone-700 p-3 rounded-lg focus:border-green-600 bg-stone-900 cursor-pointer font-medium text-stone-200 outline-none px-0" style="text-align-last: center;">
+                        ${optionsHtml}
+                    </select>
                 `;
                 container.appendChild(div);
             });
@@ -305,17 +322,17 @@
         }
 
 
+
         async function saveBonusAnswers() {
-            // Wir suchen alle Eingabefelder im aktuellen Modal
-            const inputs = document.querySelectorAll('#bonus-questions-container input');
+            // WICHTIG: Sucht jetzt nach 'select' statt 'input'!
+            const inputs = document.querySelectorAll('#bonus-questions-container select');
             let hasError = false;
             
             for (const input of inputs) {
                 const qId = input.id.replace('answer-', '');
-                const val = input.value.trim().toUpperCase(); // Immer schön in Großbuchstaben
+                const val = input.value; // Wert aus dem Dropdown
                 
-                if (val !== '') {
-                    // Durch den sicheren Briefschlitz schicken
+                if (val && val.trim() !== '') {
                     const { error } = await supabaseClient.rpc('save_secure_bonus', { 
                         p_secret: currentPassphrase, 
                         p_question_id: qId, 
@@ -326,7 +343,7 @@
                         hasError = true;
                         console.error("DB Error:", error);
                     } else {
-                        // Sofort in das Kurzzeitgedächtnis der App laden (damit man es beim nächsten Öffnen direkt sieht)
+                        // Sofort in das Kurzzeitgedächtnis der App laden
                         let existing = currentBonusPredictions.find(p => p.question_id === qId);
                         if (existing) {
                             existing.answer = val;
@@ -343,9 +360,10 @@
             }
 
             closeBonusModal();
-            // Nach dem Speichern den roten Zähler oben im Menü aktualisieren
+            // Danach prüfen, ob noch Pflicht-Fragen offen sind
             checkAndShowBonusQuestions(); 
         }
+
 
 
         // --- MATCHES LOGIC ---
