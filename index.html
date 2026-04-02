@@ -844,7 +844,7 @@
                 // Parallele High-Speed Abfrage aller Metriken
                 const [predCountRes, opsCountRes, lastPredRes, lastApiRes] = await Promise.all([
                     supabaseClient.from('predictions').select('id', { count: 'exact', head: true }),
-                    supabaseClient.from('players').select('id', { count: 'exact', head: true }),
+                    supabaseClient.from('public_leaderboard').select('id', { count: 'exact', head: true }),
                     supabaseClient.from('predictions').select('created_at').order('created_at', { ascending: false }).limit(1),
                     // Nimmt den zuletzt aktualisierten Datensatz aus der matches Tabelle
                     supabaseClient.from('matches').select('updated_at').order('updated_at', { ascending: false }).limit(1) 
