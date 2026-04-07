@@ -402,7 +402,7 @@
 
         async function fetchMatchesAndPredictions() {
             const { data: matches } = await supabaseClient.from('matches').select('*').order('kickoff', { ascending: true });
-            const { data: predictions } = await supabaseClient.from('predictions').select('*').eq('player_id', 
+            const { data: predictions } = await supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId);
             const { data: initialTrends } = await supabaseClient.from('public_match_trends').select('*');
             currentTrends = initialTrends;
             currentMatches = matches || [];
