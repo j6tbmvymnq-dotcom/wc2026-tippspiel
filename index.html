@@ -216,6 +216,8 @@
         let currentPredictions = [];
         let currentBonusPredictions = [];
         let currentPassphrase = null; 
+        let currentTrends = [];
+
 
 
         async function authenticateUser() {
@@ -612,6 +614,49 @@
                     actionButton = `<button onclick="savePrediction(${match.id})" class="mt-4 w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Prediction' : 'Lock Prediction'}</button>`;
                 }
 
+                         // Finde die Trend-Daten für GENAU DIESES Spiel
+        const trend = currentTrends.find(t => t.match_id === match.id);
+        
+        let trendHTML = '';
+        
+        // Prüfen, ob schon jemand getippt hat (total_votes > 0)
+        if (trend && trend.total_votes > 0) {
+            // Falls aus SQL 'null' zurückkommt (sollte nicht passieren), nehmen wir 0
+            const homePct = trend.win_home_pct || 0;
+            const drawPct = trend.draw_pct || 0;
+            const awayPct = trend.win_away_pct || 0;
+            const votes = trend.total_votes;
+            const plural = votes === 1 ? '' : 'S'; // Grammatik: 1 Report, 2 Reports
+
+            // Wir bauen den HTML-String dynamisch mit den echten Variablen (${...})
+            trendHTML = `
+            <div class="mt-4 pt-3 border-t border-stone-800/50">
+                <div class="flex justify-between items-center mb-1.5 px-1">
+                    <span class="text-[9px] font-black tracking-widest text-green-500/70 uppercase">HOME ${homePct}%</span>
+                    <span class="text-[9px] font-bold tracking-widest text-stone-500 uppercase">DRAW ${drawPct}%</span>
+                    <span class="text-[9px] font-black tracking-widest text-amber-500/70 uppercase">AWAY ${awayPct}%</span>
+                </div>
+                
+                <div class="w-full h-1.5 flex rounded-full overflow-hidden bg-stone-900 opacity-80">
+                    <div class="h-full bg-green-500/70" style="width: ${homePct}%;"></div>
+                    <div class="h-full bg-stone-600/50" style="width: ${drawPct}%;"></div>
+                    <div class="h-full bg-amber-500/70" style="width: ${awayPct}%;"></div>
+                </div>
+                
+                <div class="text-center mt-1">
+                    <span class="text-[8px] text-stone-600 font-mono tracking-widest">BASED ON ${votes} INTEL REPORT${plural}</span>
+                </div>
+            </div>`;
+        } else {
+            // Wenn noch niemand getippt hat, zeigen wir einen geisterhaften Dummy-Balken
+            trendHTML = `
+            <div class="mt-4 pt-3 border-t border-stone-800/50 text-center opacity-50">
+                <div class="w-full h-1.5 flex rounded-full overflow-hidden bg-stone-900 mb-1"></div>
+                <span class="text-[8px] text-stone-600 font-mono tracking-widest">AWAITING INTEL REPORTS</span>
+            </div>`;
+        }
+                       
+
                 // KARTE ZUSAMMENBAUEN
                 const card = document.createElement('div');
                 card.className = `bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden ${cardBorder} transition-all`;
@@ -634,27 +679,7 @@
                             <span class="font-bold text-[15px] leading-tight text-left text-stone-200">${match.away_team}</span>
                         </div>
                     </div>
-                    <!-- CROWD INTELLIGENCE TREND BAR -->
-                    <div class="mt-4 pt-3 border-t border-stone-800/50">
-                       <div class="flex justify-between items-center mb-1.5 px-1">
-                         <span class="text-[9px] font-black tracking-widest text-green-500/70 uppercase">HOME 62%</span>
-                         <span class="text-[9px] font-bold tracking-widest text-stone-500 uppercase">DRAW 15%</span>
-                         <span class="text-[9px] font-black tracking-widest text-amber-500/70 uppercase">AWAY 23%</span>
-                       </div>
-    
-                       <!-- Die eigentliche Leiste -->
-                       <div class="w-full h-1.5 flex rounded-full overflow-hidden bg-stone-900 opacity-80">
-                         <!-- Breiten (w-[...%]) werden per JavaScript live aus dem SQL-View eingefügt -->
-                         <div class="h-full bg-green-500/70" style="width: 62%;"></div>
-                         <div class="h-full bg-stone-600/50" style="width: 15%;"></div>
-                         <div class="h-full bg-amber-500/70" style="width: 23%;"></div>
-                       </div>
-    
-                       <div class="text-center mt-1">
-                         <span class="text-[8px] text-stone-600 font-mono tracking-widest">BASED ON 412 INTEL REPORTS</span>
-                       </div>
-                    </div>
-
+                    ${trendHTML}
                     ${actionButton}
                     ${tipFooter}
                 `;
@@ -1022,10 +1047,11 @@
             if (!currentPlayerId || !currentPassphrase) return;
 
             // Führe alle Abfragen parallel aus für maximale Geschwindigkeit
-            const [matchesRes, predRes, playerRes] = await Promise.all([
+            const [matchesRes, predRes, playerRes, trendsRes] = await Promise.all([
                 supabaseClient.from('matches').select('*').order('kickoff', { ascending: true }),
                 supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId),
-                supabaseClient.rpc('login_operative', { p_secret: currentPassphrase })
+                supabaseClient.rpc('login_operative', { p_secret: currentPassphrase }),
+                supabaseClient.from('public_match_trends').select('*')
             ]);
 
             let needsUIRefresh = false;
@@ -1069,6 +1095,8 @@
                     needsUIRefresh = true;
                 }
             }
+
+            if (!trendsRes.error) currentTrends = trendsRes.data;
 
             // Wenn sich irgendetwas Wesentliches geändert hat -> UI neu zeichnen
             if (needsUIRefresh) {
