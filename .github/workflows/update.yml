@@ -15,7 +15,7 @@ jobs:
       - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Supabase-Client installieren
         run: npm install @supabase/supabase-js
