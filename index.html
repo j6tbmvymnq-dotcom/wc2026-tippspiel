@@ -400,6 +400,16 @@
         let activeGroup = 'A';
         let activeStage = null;
 
+        function scrollToCurrentAction() {
+            const nextMatch = currentMatches.find(m => m.status !== 'FINISHED');
+            if (nextMatch) {
+                const matchElement = document.getElementById(`match-${nextMatch.id}`);
+                if (matchElement) {
+                    setTimeout(() => { matchElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+                }
+            }
+        }
+
         async function fetchMatchesAndPredictions() {
             const { data: matches } = await supabaseClient.from('matches').select('*').order('kickoff', { ascending: true });
             const { data: predictions } = await supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId);
@@ -408,6 +418,7 @@
             currentMatches = matches || [];
             currentPredictions = predictions || [];
             renderMatches();
+            scrollToCurrentAction();
         }
 
         function setMatchFilterMode(mode) {
@@ -661,8 +672,9 @@
 
                 // KARTE ZUSAMMENBAUEN
                 const card = document.createElement('div');
-                card.className = `bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden ${cardBorder} transition-all`;
-                
+                card.id = `match-${match.id}`; // <--- HIER WIRD DER ANKER GESETZT
+                card.className = `bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden ${cardBorder} transition-all`; 
+                                        
                 card.innerHTML = `
                     <div class="text-[10px] mb-3 flex justify-between items-center border-b border-stone-800 pb-2 uppercase tracking-widest">
                         <span class="${isPast ? 'text-stone-500 font-bold' : 'text-stone-300 font-black'}">${displayDateTime}</span>
@@ -824,7 +836,8 @@
             document.getElementById(`tab-${t}`).classList.add('text-green-500', 'border-green-600');
             
             if (t === 'leaderboard') fetchLeaderboard(); 
-            if (t === 'tournament') fetchTournamentGroups(); 
+            if (t === 'tournament') fetchTournamentGroups();
+            if (t === 'matches') scrollToCurrentAction();
         }
 
                 // ==========================================
@@ -1042,13 +1055,12 @@
         }
 
 
-                // ==========================================
+        // ==========================================
         // TACTICAL LIVE RADAR (Full Identity & Match Sync)
         // ==========================================
         setInterval(async () => {
             if (!currentPlayerId || !currentPassphrase) return;
 
-            // Führe alle Abfragen parallel aus für maximale Geschwindigkeit
             const [matchesRes, predRes, playerRes, trendsRes] = await Promise.all([
                 supabaseClient.from('matches').select('*').order('kickoff', { ascending: true }),
                 supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId),
@@ -1061,16 +1073,16 @@
             // 1. Check auf neue Spielstände/Status
             if (!matchesRes.error && matchesRes.data) {
                 const hasMatchUpdate = matchesRes.data.some((newM, i) => {
-                    const oldM = allMatchesCached[i];
+                    const oldM = currentMatches[i]; // GEFIXT: currentMatches
                     return oldM && (oldM.status !== newM.status || oldM.home_score !== newM.home_score || oldM.away_score !== newM.away_score);
                 });
                 if (hasMatchUpdate) {
-                    allMatchesCached = matchesRes.data;
+                    currentMatches = matchesRes.data; // GEFIXT: currentMatches
                     needsUIRefresh = true;
                 }
             }
 
-            // 2. Check auf neu berechnete Punkte (Deine Tipps)
+            // 2. Check auf neu berechnete Punkte
             if (!predRes.error && predRes.data) {
                 const hasPointsUpdate = predRes.data.some(newP => {
                     const oldP = currentPredictions.find(p => p.match_id === newP.match_id);
@@ -1082,17 +1094,15 @@
                 }
             }
 
-            // 3. Check auf neuen Gesamt-Score & Rang (Leaderboard)
+            // 3. Check auf neuen Gesamt-Score & Rang
             if (!playerRes.error && playerRes.data && playerRes.data[0]) {
                 const newPlayerData = playerRes.data[0];
                 const scoreChanged = document.getElementById('user-score').innerText !== newPlayerData.score.toString();
                 
                 if (scoreChanged) {
-                    // Update Header
                     document.getElementById('user-score').innerText = newPlayerData.score;
-                    // Wenn wir gerade im Ranks-Tab sind, müssen wir auch das Leaderboard neu laden
-                    if (!document.getElementById('ranks-view').classList.contains('hidden')) {
-                        await fetchLeaderboard(); // Lädt die allPlayersCached neu
+                    if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { // GEFIXT: view-leaderboard
+                        await fetchLeaderboard(); 
                     }
                     needsUIRefresh = true;
                 }
@@ -1100,17 +1110,16 @@
 
             if (!trendsRes.error) currentTrends = trendsRes.data;
 
-            // Wenn sich irgendetwas Wesentliches geändert hat -> UI neu zeichnen
             if (needsUIRefresh) {
-                if (!document.getElementById('matches-view').classList.contains('hidden')) {
+                if (!document.getElementById('view-matches').classList.contains('hidden')) { // GEFIXT: view-matches
                     renderMatches();
                 }
-                if (!document.getElementById('ranks-view').classList.contains('hidden')) {
+                if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { // GEFIXT: view-leaderboard
                     renderCurrentLeaderboardView();
                 }
             }
+        }, 60000); 
 
-        }, 60000); // 60-Sekunden-Takt
 
     </script>
 </body>
