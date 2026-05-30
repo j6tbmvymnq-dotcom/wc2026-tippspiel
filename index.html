@@ -11,8 +11,390 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
 
+    <!-- NEU: Fonts für Radar Modal -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- NEU: CSS für Radar Button + Modal -->
+    <style>
+        /* ── RADAR BUTTON ── */
+        .radar-btn {
+            position: relative;
+            width: 52px;
+            height: 52px;
+            background: #111;
+            border: 1px solid #2d2d2d;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            transition: border-color 0.2s, background 0.2s;
+            overflow: hidden;
+        }
+        .radar-btn:hover { border-color: #166534; background: #161a14; }
+        .radar-btn:active { transform: scale(0.95); }
+        .radar-btn .btn-label {
+            font-size: 7px;
+            color: #555;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: color 0.2s;
+            line-height: 1;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .radar-btn:hover .btn-label { color: #16a34a; }
+        .radar-svg { width: 28px; height: 28px; }
+
+        @keyframes radar-sweep-btn {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        .sweep-btn {
+            transform-origin: 50% 50%;
+            animation: radar-sweep-btn 3s linear infinite;
+        }
+        @keyframes ping-btn {
+            0%   { r: 0; opacity: 0.8; }
+            100% { r: 10; opacity: 0; }
+        }
+        .ping-btn { animation: ping-btn 3s ease-out infinite; }
+
+        /* ── MODAL OVERLAY ── */
+        #intel-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0);
+            z-index: 200;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            pointer-events: none;
+            transition: background 0.35s ease;
+        }
+        #intel-modal.open {
+            background: rgba(0,0,0,0.88);
+            pointer-events: all;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ── MODAL SHEET ── */
+        #intel-sheet {
+            width: 100%;
+            max-width: 480px;
+            max-height: 92vh;
+            background: #0f0e0d;
+            border-top: 1px solid #2a2a2a;
+            border-left: 1px solid #2a2a2a;
+            border-right: 1px solid #2a2a2a;
+            border-radius: 20px 20px 0 0;
+            overflow: hidden;
+            transform: translateY(100%);
+            transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        #intel-modal.open #intel-sheet { transform: translateY(0); }
+
+        /* ── MODAL HEADER ── */
+        .modal-header {
+            position: relative;
+            background: #080807;
+            border-bottom: 1px solid #1e1e1e;
+            padding: 24px 20px 20px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .modal-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg, transparent, transparent 3px,
+                rgba(0,0,0,0.12) 3px, rgba(0,0,0,0.12) 4px
+            );
+            pointer-events: none;
+            z-index: 2;
+        }
+        .header-glow {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px; height: 220px;
+            background: radial-gradient(circle, rgba(22,163,74,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: relative;
+            z-index: 3;
+            margin-bottom: 20px;
+        }
+        .header-eyebrow {
+            font-size: 9px;
+            color: #4ade80;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .header-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 28px;
+            color: #f5f5f4;
+            letter-spacing: 0.05em;
+            line-height: 1;
+        }
+        .header-title span { color: #4ade80; }
+        .header-sub {
+            font-size: 8px;
+            color: #44403c;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-top: 4px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .intel-close-btn {
+            background: #1c1917;
+            border: 1px solid #292524;
+            color: #78716c;
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: color 0.2s, border-color 0.2s;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .intel-close-btn:hover { color: #f5f5f4; border-color: #44403c; }
+        .radar-display {
+            display: flex;
+            justify-content: center;
+            position: relative;
+            z-index: 3;
+        }
+        .big-radar { width: 160px; height: 160px; }
+        @keyframes radar-sweep {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        .sweep-arm {
+            transform-origin: 80px 80px;
+            animation: radar-sweep 4s linear infinite;
+        }
+        @keyframes blip-pulse {
+            0%   { opacity: 0; r: 2; }
+            20%  { opacity: 1; r: 3.5; }
+            100% { opacity: 0; r: 2; }
+        }
+        .blip { animation: blip-pulse 4s ease-in-out infinite; }
+        .blip-1 { animation-delay: 0.2s; }
+        .blip-2 { animation-delay: 1.1s; }
+        .blip-3 { animation-delay: 2.3s; }
+        .blip-4 { animation-delay: 3.0s; }
+        .blip-5 { animation-delay: 0.7s; }
+        .ops-badge {
+            position: absolute;
+            bottom: 8px; right: 20px;
+            font-size: 8px;
+            color: #44403c;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .live-dot {
+            width: 5px; height: 5px;
+            background: #16a34a;
+            border-radius: 50%;
+        }
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.3; transform: scale(0.7); }
+        }
+        .live-dot { animation: live-pulse 2s ease-in-out infinite; }
+
+        /* ── MODAL BODY ── */
+        .modal-body {
+            overflow-y: auto;
+            flex: 1;
+            padding: 16px;
+            scrollbar-width: none;
+        }
+        .modal-body::-webkit-scrollbar { display: none; }
+        .section-label {
+            font-size: 8px;
+            color: #44403c;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #1e1e1e;
+        }
+        .nation-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #111;
+            border: 1px solid #1e1e1e;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+            transition: border-color 0.15s;
+        }
+        .nation-row:hover { border-color: #2d2d2d; }
+        .nation-row.top-pick { border-color: #166534; background: #0b130d; }
+        .nation-row.top-pick:hover { border-color: #15803d; }
+        .row-fill {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            background: linear-gradient(90deg, rgba(22,101,52,0.18) 0%, transparent 100%);
+            width: 0%;
+            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 10px;
+        }
+        .top-pick .row-fill {
+            background: linear-gradient(90deg, rgba(22,163,74,0.15) 0%, transparent 100%);
+        }
+        .row-rank {
+            font-size: 9px;
+            color: #44403c;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .top-pick .row-rank { color: #4ade80; }
+        .row-name {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 18px;
+            color: #d6d3d1;
+            letter-spacing: 0.05em;
+            flex: 1;
+            position: relative;
+            z-index: 1;
+            line-height: 1;
+        }
+        .top-pick .row-name { color: #f5f5f4; }
+        .row-bar-wrap {
+            width: 80px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+        .row-bar-bg {
+            height: 3px;
+            background: #1e1e1e;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 3px;
+        }
+        .row-bar-inner {
+            height: 100%;
+            width: 0%;
+            background: #16a34a;
+            border-radius: 2px;
+            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .top-pick .row-bar-inner { background: #4ade80; }
+        .row-pct {
+            font-size: 9px;
+            color: #4ade80;
+            text-align: right;
+            letter-spacing: 0.05em;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .row-votes {
+            font-size: 8px;
+            color: #44403c;
+            text-align: right;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .row-pts-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        .crown-badge {
+            font-size: 7px;
+            background: #166534;
+            color: #4ade80;
+            border: 1px solid #15803d;
+            padding: 2px 5px;
+            border-radius: 4px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+            flex-shrink: 0;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 16px;
+            margin-bottom: 4px;
+        }
+        .stat-cell {
+            background: #111;
+            border: 1px solid #1e1e1e;
+            border-radius: 10px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 7px;
+            color: #44403c;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 22px;
+            color: #4ade80;
+            line-height: 1;
+        }
+        .stat-value.muted { color: #78716c; }
+        .ticker {
+            font-size: 8px;
+            color: #292524;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 12px 0 6px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+    </style>
 </head>
 <body class="bg-stone-950 text-stone-300 font-sans antialiased selection:bg-green-900 selection:text-white">
 
@@ -33,6 +415,30 @@
             <div class="absolute top-0 right-0 w-32 h-32 bg-green-900 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
             
             <div class="absolute top-6 right-6 flex items-center gap-3 z-20">
+                <!-- NEU: Radar Button -->
+                <button class="radar-btn" onclick="openIntelModal()" title="WC Winner Votes">
+                    <svg class="radar-svg" viewBox="0 0 28 28" fill="none">
+                        <circle cx="14" cy="14" r="12" stroke="#1e3a2a" stroke-width="0.8"/>
+                        <circle cx="14" cy="14" r="8"  stroke="#1e3a2a" stroke-width="0.8"/>
+                        <circle cx="14" cy="14" r="4"  stroke="#1e3a2a" stroke-width="0.8"/>
+                        <line x1="14" y1="2"  x2="14" y2="26" stroke="#1a2e20" stroke-width="0.6"/>
+                        <line x1="2"  y1="14" x2="26" y2="14" stroke="#1a2e20" stroke-width="0.6"/>
+                        <g class="sweep-btn">
+                            <defs>
+                                <radialGradient id="swg-btn" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#4ade80" stop-opacity="0.5"/>
+                                    <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
+                                </radialGradient>
+                            </defs>
+                            <path d="M14 14 L14 2 A12 12 0 0 1 25.2 19.8 Z" fill="url(#swg-btn)" opacity="0.6"/>
+                            <line x1="14" y1="14" x2="14" y2="2" stroke="#4ade80" stroke-width="0.8" opacity="0.9"/>
+                        </g>
+                        <circle cx="14" cy="14" r="1.5" fill="#4ade80"/>
+                        <circle cx="14" cy="14" r="0" fill="none" stroke="#4ade80" stroke-width="0.8" class="ping-btn"/>
+                    </svg>
+                    <span class="btn-label">WC WIN</span>
+                </button>
+
                 <button onclick="window.location.reload()" class="text-stone-400 hover:text-white transition-colors p-2 bg-stone-800 rounded-full border border-stone-700 shadow-md focus:outline-none focus:ring-2 focus:ring-green-600">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 </button>
@@ -195,7 +601,6 @@
             </div>
             
             <div class="p-5 overflow-y-auto space-y-1 text-xs uppercase tracking-widest text-stone-400" id="score-breakdown-content">
-                <!-- Wird per JS generiert -->
             </div>
             
             <div class="p-5 border-t border-stone-800 bg-stone-950 flex justify-between items-center shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-10">
@@ -205,10 +610,94 @@
         </div>
     </div>
 
+    <!-- NEU: WC WINNER RADAR MODAL -->
+    <div id="intel-modal" onclick="handleModalClick(event)">
+        <div id="intel-sheet">
+            <div class="modal-header">
+                <div class="header-glow"></div>
+                <div class="header-top">
+                    <div>
+                        <p class="header-eyebrow">// BQ 1 · WORLD CUP WINNER //</p>
+                        <h2 class="header-title">WHO WINS<br><span>THE CUP?</span></h2>
+                        <p class="header-sub">HOW USERS VOTED · LOCKED PREDICTIONS</p>
+                    </div>
+                    <button class="intel-close-btn" onclick="closeIntelModal()">×</button>
+                </div>
+                <div class="radar-display">
+                    <svg class="big-radar" viewBox="0 0 160 160" fill="none">
+                        <defs>
+                            <radialGradient id="sweep-grad" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%"   stop-color="#4ade80" stop-opacity="0.45"/>
+                                <stop offset="70%"  stop-color="#16a34a" stop-opacity="0.12"/>
+                                <stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+                            </radialGradient>
+                            <radialGradient id="center-glow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%"   stop-color="#4ade80" stop-opacity="0.3"/>
+                                <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="80" cy="80" r="74" fill="none" stroke="#0d1f12" stroke-width="1"/>
+                        <circle cx="80" cy="80" r="72" stroke="#0f2016" stroke-width="0.8"/>
+                        <circle cx="80" cy="80" r="54" stroke="#0f2016" stroke-width="0.8"/>
+                        <circle cx="80" cy="80" r="36" stroke="#122018" stroke-width="0.8"/>
+                        <circle cx="80" cy="80" r="18" stroke="#122018" stroke-width="0.8"/>
+                        <line x1="80" y1="8"   x2="80" y2="152" stroke="#0d1c11" stroke-width="0.7"/>
+                        <line x1="8"  y1="80"  x2="152" y2="80" stroke="#0d1c11" stroke-width="0.7"/>
+                        <line x1="29" y1="29"  x2="131" y2="131" stroke="#0a1810" stroke-width="0.5"/>
+                        <line x1="131" y1="29" x2="29"  y2="131" stroke="#0a1810" stroke-width="0.5"/>
+                        <circle cx="80" cy="8"   r="1.2" fill="#122018"/>
+                        <circle cx="80" cy="152" r="1.2" fill="#122018"/>
+                        <circle cx="8"  cy="80"  r="1.2" fill="#122018"/>
+                        <circle cx="152" cy="80" r="1.2" fill="#122018"/>
+                        <g class="sweep-arm">
+                            <path d="M80 80 L80 8 A72 72 0 0 1 148 98 Z" fill="url(#sweep-grad)"/>
+                            <line x1="80" y1="80" x2="80" y2="8" stroke="#4ade80" stroke-width="1.2" opacity="0.9"/>
+                        </g>
+                        <circle class="blip blip-1" cx="104" cy="42" r="2.5" fill="#4ade80"/>
+                        <circle class="blip blip-2" cx="55"  cy="65" r="3"   fill="#4ade80"/>
+                        <circle class="blip blip-3" cx="118" cy="95" r="2"   fill="#4ade80"/>
+                        <circle class="blip blip-4" cx="42"  cy="110" r="2.5" fill="#86efac"/>
+                        <circle class="blip blip-5" cx="90"  cy="120" r="2"  fill="#4ade80"/>
+                        <circle cx="80" cy="80" r="16" fill="url(#center-glow)"/>
+                        <circle cx="80" cy="80" r="3.5" fill="#1c1917" stroke="#16a34a" stroke-width="1"/>
+                        <circle cx="80" cy="80" r="1.5" fill="#4ade80"/>
+                        <text x="78" y="5"   fill="#1a3322" font-size="4" font-family="Share Tech Mono">N</text>
+                        <text x="154" y="82" fill="#1a3322" font-size="4" font-family="Share Tech Mono">E</text>
+                        <text x="78" y="158" fill="#1a3322" font-size="4" font-family="Share Tech Mono">S</text>
+                        <text x="2"  y="82"  fill="#1a3322" font-size="4" font-family="Share Tech Mono">W</text>
+                    </svg>
+                </div>
+                <div class="ops-badge">
+                    <span class="live-dot"></span>
+                    <span id="ops-count">-- USERS VOTED</span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="stats-row">
+                    <div class="stat-cell">
+                        <div class="stat-label">Users Voted</div>
+                        <div class="stat-value" id="stat-total">—</div>
+                    </div>
+                    <div class="stat-cell">
+                        <div class="stat-label">Nations Picked</div>
+                        <div class="stat-value muted" id="stat-nations">—</div>
+                    </div>
+                    <div class="stat-cell">
+                        <div class="stat-label">Favourite</div>
+                        <div class="stat-value" id="stat-toppick" style="font-size:14px;padding-top:4px;">—</div>
+                    </div>
+                </div>
+                <div class="section-label" style="margin-top:20px;">WHO DO USERS THINK WINS THE WORLD CUP?</div>
+                <div id="nations-list"></div>
+                <p class="ticker">BASED ON LOCKED BQ 1 ANSWERS · ALL USERS · WC 2026</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- 1. CONFIGURATION ---
         const supabaseUrl = 'https://jciyjrotbmhvvdorapnt.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54'; // <-- DEIN KEY
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaXlqcm90Ym1odnZkb3JhcG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4NTI4MDgsImV4cCI6MjA5MDQyODgwOH0.W2g3_44Gn4tsTLkMdyio_WEhSv-FABgKzMPC9mIgG54';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentPlayerId = null;
@@ -218,26 +707,22 @@
         let currentPassphrase = null; 
         let currentTrends = [];
 
-
-
         async function authenticateUser() {
             const urlParams = new URLSearchParams(window.location.search);
             const secretKey = urlParams.get('key');
             if (!secretKey) return document.getElementById('error-screen').classList.remove('hidden');
             
-            // NEU: Wir nutzen den sicheren RPC-Login
             const { data: players, error } = await supabaseClient.rpc('login_operative', { p_secret: secretKey });
             
             if (error || !players || players.length === 0) return document.getElementById('error-screen').classList.remove('hidden');
             
-            currentPassphrase = secretKey; // Passphrase für die Session speichern
-            loadDashboard(players[0]); // Das Array entpacken
+            currentPassphrase = secretKey;
+            loadDashboard(players[0]);
         }
 
         function loadDashboard(player) {
             currentPlayerId = player.id;
             document.getElementById('user-nickname').textContent = player.nickname;
-                        // Zeige den BQ-Edit-Button nur, wenn das Turnier noch nicht angefangen hat
             const bqDeadline = new Date('2026-06-11T21:00:00+02:00');
             if (new Date() < bqDeadline) {
                 document.getElementById('btn-edit-bonus').classList.remove('hidden');
@@ -286,23 +771,16 @@
         let unansweredQuestions = [];
 
         async function checkAndShowBonusQuestions() {
-            // Lade ALLE bisherigen Antworten aus der Datenbank ins Kurzzeitgedächtnis
             const { data: existingAnswers } = await supabaseClient.from('bonus_predictions').select('*').eq('player_id', currentPlayerId);
             currentBonusPredictions = existingAnswers || [];
-
-            // Sperre prüfen
             if (new Date() >= OPENING_MATCH_DATE) return;
-            
-            // Filtern, welche Fragen noch unbeantwortet sind
             const answeredIds = currentBonusPredictions.map(ans => ans.question_id);
             unansweredQuestions = BONUS_QUESTIONS.filter(q => !answeredIds.includes(q.id));
-            
             if (unansweredQuestions.length > 0) {
                 renderBonusQuestions();
                 document.getElementById('bonus-modal').classList.remove('hidden');
             }
         }
-
 
         function renderBonusQuestions() {
             const container = document.getElementById('bonus-questions-container');
@@ -322,19 +800,14 @@
         function openAllBonusModal() {
             const container = document.getElementById('bonus-questions-container');
             container.innerHTML = '';
-            
-            // WICHTIG: BONUS_QUESTIONS groß geschrieben!
             BONUS_QUESTIONS.forEach(q => {
                 const existingPred = currentBonusPredictions.find(p => p.question_id === q.id);
                 const currentAnswer = existingPred ? existingPred.answer : '';
-
-                // Dropdown Optionen bauen und gespeicherte Antwort vorauswählen
                 let optionsHtml = '<option value="" disabled selected>Select an option...</option>';
                 q.options.forEach(opt => { 
                     const isSelected = currentAnswer === opt.toUpperCase() ? 'selected' : '';
                     optionsHtml += `<option value="${opt.toUpperCase()}" ${isSelected}>${opt}</option>`; 
                 });
-
                 const div = document.createElement('div');
                 div.className = 'bg-stone-950 border border-stone-800 p-4 rounded-xl shadow-inner mb-4';
                 div.innerHTML = `
@@ -345,33 +818,25 @@
                 `;
                 container.appendChild(div);
             });
-
             document.getElementById('bonus-modal').classList.remove('hidden');
         }
 
-
-
         async function saveBonusAnswers() {
-            // WICHTIG: Sucht jetzt nach 'select' statt 'input'!
             const inputs = document.querySelectorAll('#bonus-questions-container select');
             let hasError = false;
-            
             for (const input of inputs) {
                 const qId = input.id.replace('answer-', '');
-                const val = input.value; // Wert aus dem Dropdown
-                
+                const val = input.value;
                 if (val && val.trim() !== '') {
                     const { error } = await supabaseClient.rpc('save_secure_bonus', { 
                         p_secret: currentPassphrase, 
                         p_question_id: qId, 
                         p_answer: val 
                     });
-                    
                     if (error) {
                         hasError = true;
                         console.error("DB Error:", error);
                     } else {
-                        // Sofort in das Kurzzeitgedächtnis der App laden
                         let existing = currentBonusPredictions.find(p => p.question_id === qId);
                         if (existing) {
                             existing.answer = val;
@@ -381,18 +846,13 @@
                     }
                 }
             }
-            
             if (hasError) {
                 alert("Intel transmission failed (Database error or Deadline passed!).");
                 return;
             }
-
             closeBonusModal();
-            // Danach prüfen, ob noch Pflicht-Fragen offen sind
             checkAndShowBonusQuestions(); 
         }
-
-
 
         // --- MATCHES LOGIC ---
         let matchFilterMode = 'date'; 
@@ -444,7 +904,6 @@
             return map[apiStage] || apiStage.replace('_', ' ');
         }
 
-        // Bulletproof Date-Extractor für litauische Zeitzone (Europe/Vilnius)
         function getVilniusDateStr(isoString) {
             const d = new Date(isoString);
             const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Vilnius', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
@@ -485,9 +944,7 @@
 
             if (matchFilterMode === 'date') {
                 const datesMap = new Set();
-                currentMatches.forEach(m => {
-                    datesMap.add(getVilniusDateStr(m.kickoff));
-                });
+                currentMatches.forEach(m => { datesMap.add(getVilniusDateStr(m.kickoff)); });
                 const dates = Array.from(datesMap).sort();
                 if (!activeDate || !dates.includes(activeDate)) activeDate = dates[0];
 
@@ -495,7 +952,6 @@
                     const btnDate = new Date(`${dateStr}T12:00:00Z`); 
                     const shortDay = btnDate.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
                     const shortDate = btnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-                    
                     const isActive = dateStr === activeDate;
                     const btn = document.createElement('button');
                     btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`;
@@ -543,13 +999,12 @@
             listContainer.className = 'space-y-4';
             
             if(filteredMatches.length === 0) {
-                 listContainer.innerHTML = '<p class="text-stone-600 text-center text-sm font-mono mt-8">No matches found in this sector.</p>';
+                listContainer.innerHTML = '<p class="text-stone-600 text-center text-sm font-mono mt-8">No matches found in this sector.</p>';
             }
 
-            // Aktuelle Zeit für den Deadline-Check
             const now = new Date();
 
-                                    filteredMatches.forEach(match => {
+            filteredMatches.forEach(match => {
                 const pred = currentPredictions.find(p => p.match_id === match.id);
                 const isPast = new Date(match.kickoff) <= now;
                 
@@ -570,17 +1025,14 @@
                 let actionButton = '';
                 let cardBorder = 'border-l-4 border-l-stone-700';
 
-                // WENN DAS SPIEL BEREITS BEGONNEN HAT ODER VORBEI IST
                 if (isPast) {
                     const realHome = match.home_score !== null ? match.home_score : '-';
                     const realAway = match.away_score !== null ? match.away_score : '-';
 
-                    // 1. Status Badge Logik
                     if (match.status === 'IN_PLAY' || match.status === 'PAUSED') {
                         statusBadge = `<span class="text-red-500 font-black flex items-center gap-1"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> LIVE</span>`;
                         cardBorder = 'border-l-4 border-l-red-600';
                     } else if (match.status === 'FINISHED') {
-                        // Da unser Default für points_earned 0 ist, nehmen wir an: Wenn das Spiel FINISHED ist, ist es in Kürze berechnet
                         statusBadge = `<span class="text-green-500 font-black flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> OFFICIAL</span>`;
                         cardBorder = 'border-l-4 border-l-stone-600';
                     } else {
@@ -588,10 +1040,8 @@
                         cardBorder = 'border-l-4 border-l-amber-600';
                     }
 
-                    // 2. Das echte Ergebnis in der Mitte
                     middleContent = `<div class="text-3xl font-black text-stone-100 tracking-widest">${realHome} <span class="text-stone-600">:</span> ${realAway}</div>`;
 
-                    // 3. Was hat der Nutzer getippt? (Footer)
                     if (pred) {
                         let ptsBadge = '';
                         if (match.status === 'FINISHED') {
@@ -613,7 +1063,6 @@
                             </div>`;
                     }
 
-                // WENN DAS SPIEL IN DER ZUKUNFT LIEGT
                 } else {
                     statusBadge = `<span class="text-stone-500 font-bold">SCHEDULED</span>`;
                     cardBorder = pred ? 'border-l-4 border-l-green-600' : 'border-l-4 border-l-stone-700';
@@ -627,54 +1076,42 @@
                     actionButton = `<button onclick="savePrediction(${match.id})" class="mt-4 w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm">${pred ? 'Update Prediction' : 'Lock Prediction'}</button>`;
                 }
 
-                         // Finde die Trend-Daten für GENAU DIESES Spiel
-        const trend = currentTrends.find(t => t.match_id === match.id);
-        
-        let trendHTML = '';
-        
-        // Prüfen, ob schon jemand getippt hat (total_votes > 0)
-        if (trend && trend.total_votes > 0) {
-            // Falls aus SQL 'null' zurückkommt (sollte nicht passieren), nehmen wir 0
-            const homePct = trend.win_home_pct || 0;
-            const drawPct = trend.draw_pct || 0;
-            const awayPct = trend.win_away_pct || 0;
-            const votes = trend.total_votes;
-            const plural = votes === 1 ? '' : 'S'; // Grammatik: 1 Report, 2 Reports
-
-            // Wir bauen den HTML-String dynamisch mit den echten Variablen (${...})
-            trendHTML = `
-            <div class="mt-4 pt-3 border-t border-stone-800/50">
-                <div class="flex justify-between items-center mb-1.5 px-1">
-                    <span class="text-[9px] font-black tracking-widest text-green-500/70 uppercase">HOME ${homePct}%</span>
-                    <span class="text-[9px] font-bold tracking-widest text-stone-500 uppercase">DRAW ${drawPct}%</span>
-                    <span class="text-[9px] font-black tracking-widest text-amber-500/70 uppercase">AWAY ${awayPct}%</span>
-                </div>
+                const trend = currentTrends.find(t => t.match_id === match.id);
+                let trendHTML = '';
                 
-                <div class="w-full h-1.5 flex rounded-full overflow-hidden bg-stone-900 opacity-80">
-                    <div class="h-full bg-green-500/70" style="width: ${homePct}%;"></div>
-                    <div class="h-full bg-stone-600/50" style="width: ${drawPct}%;"></div>
-                    <div class="h-full bg-amber-500/70" style="width: ${awayPct}%;"></div>
-                </div>
-                
-                <div class="text-center mt-1">
-                    <span class="text-[8px] text-stone-600 font-mono tracking-widest">BASED ON ${votes} PREDICTION${plural}</span>
-                </div>
-            </div>`;
-        } else {
-            // Wenn noch niemand getippt hat, zeigen wir einen geisterhaften Dummy-Balken
-            trendHTML = `
-            <div class="mt-4 pt-3 border-t border-stone-800/50 text-center opacity-50">
-                <div class="w-full h-1.5 flex rounded-full overflow-hidden bg-stone-900 mb-1"></div>
-                <span class="text-[8px] text-stone-600 font-mono tracking-widest">AWAITING PREDICTIONS</span>
-            </div>`;
-        }
-                       
+                if (trend && trend.total_votes > 0) {
+                    const homePct = trend.win_home_pct || 0;
+                    const drawPct = trend.draw_pct || 0;
+                    const awayPct = trend.win_away_pct || 0;
+                    const votes = trend.total_votes;
+                    const plural = votes === 1 ? '' : 'S';
+                    trendHTML = `
+                    <div class="mt-4 pt-3 border-t border-stone-800/50">
+                        <div class="flex justify-between items-center mb-1.5 px-1">
+                            <span class="text-[9px] font-black tracking-widest text-green-500/70 uppercase">HOME ${homePct}%</span>
+                            <span class="text-[9px] font-bold tracking-widest text-stone-500 uppercase">DRAW ${drawPct}%</span>
+                            <span class="text-[9px] font-black tracking-widest text-amber-500/70 uppercase">AWAY ${awayPct}%</span>
+                        </div>
+                        <div class="w-full h-1.5 flex rounded-full overflow-hidden bg-stone-900 opacity-80">
+                            <div class="h-full bg-green-500/70" style="width: ${homePct}%;"></div>
+                            <div class="h-full bg-stone-600/50" style="width: ${drawPct}%;"></div>
+                            <div class="h-full bg-amber-500/70" style="width: ${awayPct}%;"></div>
+                        </div>
+                        <div class="text-center mt-1">
+                            <span class="text-[8px] text-stone-600 font-mono tracking-widest">BASED ON ${votes} PREDICTION${plural}</span>
+                        </div>
+                    </div>`;
+                } else {
+                    trendHTML = `
+                    <div class="mt-4 pt-3 border-t border-stone-800/50 text-center opacity-50">
+                        <div class="w-full h-1.5 flex rounded-full overflow-hidden bg-stone-900 mb-1"></div>
+                        <span class="text-[8px] text-stone-600 font-mono tracking-widest">AWAITING PREDICTIONS</span>
+                    </div>`;
+                }
 
-                // KARTE ZUSAMMENBAUEN
                 const card = document.createElement('div');
-                card.id = `match-${match.id}`; // <--- HIER WIRD DER ANKER GESETZT
+                card.id = `match-${match.id}`;
                 card.className = `bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md flex flex-col relative overflow-hidden ${cardBorder} transition-all`; 
-                                        
                 card.innerHTML = `
                     <div class="text-[10px] mb-3 flex justify-between items-center border-b border-stone-800 pb-2 uppercase tracking-widest">
                         <span class="${isPast ? 'text-stone-500 font-bold' : 'text-stone-300 font-black'}">${displayDateTime}</span>
@@ -700,7 +1137,6 @@
                 listContainer.appendChild(card);
             });
 
-            
             vm.appendChild(listContainer);
 
             setTimeout(() => {
@@ -709,24 +1145,17 @@
             }, 10);
         }
 
-                async function savePrediction(matchId) {
+        async function savePrediction(matchId) {
             const h = document.getElementById(`home-${matchId}`).value;
             const a = document.getElementById(`away-${matchId}`).value;
-            
-            if (h === '' || a === '') {
-                return alert('Please input valid prediction (score)!');
-            }
-            
-            // Wir werfen den Tipp inkl. geheimer Passphrase durch den sicheren Briefschlitz
+            if (h === '' || a === '') return alert('Please input valid prediction (score)!');
             const { error } = await supabaseClient.rpc('save_secure_prediction', { 
                 p_secret: currentPassphrase, 
                 p_match_id: matchId, 
                 p_home: parseInt(h), 
                 p_away: parseInt(a) 
             });
-
-                        if (!error) {
-                // NEU: Wir updaten das Kurzzeitgedächtnis der App sofort!
+            if (!error) {
                 const existingTip = currentPredictions.find(p => p.match_id === matchId);
                 if (existingTip) {
                     existingTip.home_pred = parseInt(h);
@@ -734,20 +1163,16 @@
                 } else {
                     currentPredictions.push({ match_id: matchId, home_pred: parseInt(h), away_pred: parseInt(a), points_earned: 0 });
                 }
-
-                // Button Styling (wie bisher)
                 const btn = document.querySelector(`button[onclick="savePrediction(${matchId})"]`);
                 if (btn) {
                     btn.innerText = '✓'; 
                     btn.className = 'mt-4 w-full bg-green-600 text-white font-bold py-2.5 rounded-lg border border-green-500 text-xs uppercase tracking-widest shadow-sm transition-colors';
-                    
                     setTimeout(() => { 
                         btn.innerText = 'Update Predictions'; 
                         btn.className = 'mt-4 w-full bg-stone-800 text-green-500 font-bold py-2.5 rounded-lg border border-stone-700 transition-colors hover:bg-green-800 hover:text-white hover:border-green-700 text-xs uppercase tracking-widest shadow-sm'; 
                     }, 2000);
                 }
             } else {
-
                 console.error("Datenbank-Fehler beim Speichern:", error);
                 alert('Secure uplink failed. Cannot save prediction.');
             }
@@ -782,7 +1207,6 @@
                     const gdDisplay = gd > 0 ? `+${gd}` : gd;
                     const rankClass = i < 2 ? 'border-l-4 border-green-600' : (i === 2 ? 'border-l-4 border-amber-600' : 'border-l-4 border-transparent');
                     const teamFlag = t.crest ? `<img src="${t.crest}" class="w-5 h-5 inline-block mr-2 object-contain flex-shrink-0">` : '';
-
                     rowsHtml += `
                         <tr class="hover:bg-stone-800/50 border-b border-stone-800 bg-stone-900 transition-colors">
                             <td class="${rankClass} p-2 text-center text-stone-500 font-black text-xs">${i+1}</td>
@@ -824,7 +1248,7 @@
             });
         }
 
-        // --- TAB SWITCHING & LEADERBOARD LOGIK ---
+        // --- TAB SWITCHING ---
         function switchTab(t) {
             ['matches','tournament','leaderboard','info'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.add('hidden');
@@ -834,30 +1258,24 @@
             document.getElementById(`view-${t}`).classList.remove('hidden');
             document.getElementById(`tab-${t}`).classList.remove('text-stone-500', 'border-transparent');
             document.getElementById(`tab-${t}`).classList.add('text-green-500', 'border-green-600');
-            
             if (t === 'leaderboard') fetchLeaderboard(); 
             if (t === 'tournament') fetchTournamentGroups();
             if (t === 'matches') scrollToCurrentAction();
         }
 
-                // ==========================================
-        // SCORE TELEMETRY LOGIC
-        // ==========================================
+        // --- SCORE BREAKDOWN ---
         function openScoreBreakdown() {
             const content = document.getElementById('score-breakdown-content');
             content.innerHTML = '';
             let calculatedTotal = 0;
 
-            // 1. Hole alle regulären Spiele, bei denen Punkte erzielt wurden
             const scoringMatches = currentPredictions.filter(p => p.points_earned > 0);
-            
             if (scoringMatches.length > 0) {
                 content.innerHTML += `<div class="text-[10px] text-stone-500 border-b border-stone-800 pb-1 mb-2 mt-2">Match Operations</div>`;
                 scoringMatches.forEach(p => {
                     const match = currentMatches.find(m => m.id === p.match_id);
                     if (match) {
                         calculatedTotal += p.points_earned;
-                        // Farbliches Feedback: 3 Punkte = Gold, 1 Punkt = Grün
                         const pointColor = p.points_earned === 3 ? 'text-amber-500' : 'text-green-400';
                         content.innerHTML += `
                             <div class="flex justify-between items-center py-2 hover:bg-stone-800/30 rounded px-1 transition-colors">
@@ -868,16 +1286,13 @@
                 });
             }
 
-            // 2. Hole alle Bonusfragen, bei denen Punkte erzielt wurden
             const scoringBonus = currentBonusPredictions.filter(p => p.points_earned > 0);
-            
             if (scoringBonus.length > 0) {
                 content.innerHTML += `<div class="text-[10px] text-amber-600/50 border-b border-stone-800 pb-1 mb-2 mt-6">Bonus Intel Operations</div>`;
                 scoringBonus.forEach(p => {
                     const bq = BONUS_QUESTIONS.find(q => q.id === p.question_id);
                     if (bq) {
                         calculatedTotal += p.points_earned;
-                        // Extrahiere nur "BQ 1", "BQ 2" etc. aus dem langen Text
                         const bqShort = bq.text.split(':')[0]; 
                         content.innerHTML += `
                             <div class="flex justify-between items-center py-2 hover:bg-stone-800/30 rounded px-1 transition-colors">
@@ -891,7 +1306,6 @@
                 });
             }
 
-            // 3. Fallback, wenn man noch genau 0 Punkte hat
             if (calculatedTotal === 0) {
                 content.innerHTML = `
                     <div class="flex flex-col items-center justify-center py-12 text-center opacity-50">
@@ -900,7 +1314,6 @@
                     </div>`;
             }
 
-            // Setze den Total Score zur Sicherheit nochmal
             document.getElementById('score-breakdown-total').innerText = calculatedTotal;
             document.getElementById('score-breakdown-modal').classList.remove('hidden');
         }
@@ -909,7 +1322,7 @@
             document.getElementById('score-breakdown-modal').classList.add('hidden');
         }
 
-
+        // --- LEADERBOARD ---
         let allPlayersCached = [];
         let currentLeaderboardMode = 'top50'; 
 
@@ -933,7 +1346,7 @@
             renderCurrentLeaderboardView();
         }
 
-                function renderCurrentLeaderboardView() {
+        function renderCurrentLeaderboardView() {
             const pc = document.getElementById('podium-container');
             let list = [], start = 0;
             if (currentLeaderboardMode === 'top50') {
@@ -978,56 +1391,29 @@
             });
         }
 
-
         authenticateUser();
 
-
-                // ==========================================
-        // SYSTEM TELEMETRY (Stats for Nerds)
-        // ==========================================
+        // --- TELEMETRY ---
         async function toggleTelemetry() {
             const panel = document.getElementById('telemetry-panel');
-            
-            // Toggle Sichtbarkeit
-            if (!panel.classList.contains('hidden')) {
-                panel.classList.add('hidden');
-                return;
-            }
-            
+            if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
             panel.classList.remove('hidden');
             panel.innerHTML = '<span class="text-[10px] text-stone-500 font-mono uppercase tracking-widest animate-pulse">Establishing secure uplink... fetching telemetry...</span>';
-
             try {
-                // Parallele High-Speed Abfrage aller Metriken
                 const [predCountRes, opsCountRes, lastPredRes, lastApiRes] = await Promise.all([
                     supabaseClient.from('predictions').select('id', { count: 'exact', head: true }),
                     supabaseClient.from('public_leaderboard').select('id', { count: 'exact', head: true }),
                     supabaseClient.from('predictions').select('created_at').order('created_at', { ascending: false }).limit(1),
-                    // Nimmt den zuletzt aktualisierten Datensatz aus der matches Tabelle
                     supabaseClient.from('matches').select('updated_at').order('updated_at', { ascending: false }).limit(1) 
                 ]);
-
                 const totalPreds = predCountRes.count || 0;
                 const totalOps = opsCountRes.count || 0;
-
-                // Zeit-Formatierung auf Litauen (Europe/Vilnius)
                 const formatTime = (isoString) => {
                     if (!isoString) return 'NO SIGNAL';
-                    return new Date(isoString).toLocaleString('en-US', { 
-                        timeZone: 'Europe/Vilnius', 
-                        month: 'short', 
-                        day: '2-digit', 
-                        hour: '2-digit', 
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false 
-                    });
+                    return new Date(isoString).toLocaleString('en-US', { timeZone: 'Europe/Vilnius', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
                 };
-
                 const lastPredTime = (lastPredRes.data && lastPredRes.data.length > 0) ? formatTime(lastPredRes.data[0].created_at) : 'NO SIGNAL';
                 const lastApiTime = (lastApiRes.data && lastApiRes.data.length > 0) ? formatTime(lastApiRes.data[0].updated_at) : 'NO SIGNAL';
-
-                // Rendern des Dashboards
                 panel.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] uppercase tracking-widest font-mono text-stone-400">
                         <div class="bg-stone-900/50 p-2 rounded border border-stone-800/50 flex justify-between items-center">
@@ -1054,10 +1440,86 @@
             }
         }
 
+        // --- NEU: RADAR MODAL LOGIC ---
+        let bq1Loaded = false;
 
-        // ==========================================
-        // TACTICAL LIVE RADAR (Full Identity & Match Sync)
-        // ==========================================
+        function openIntelModal() {
+            document.getElementById('intel-modal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            if (!bq1Loaded) { loadBQ1Data(); bq1Loaded = true; }
+        }
+
+        function closeIntelModal() {
+            document.getElementById('intel-modal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function handleModalClick(e) {
+            if (e.target === document.getElementById('intel-modal')) closeIntelModal();
+        }
+
+        async function loadBQ1Data() {
+            const { data, error } = await supabaseClient
+                .from('bonus_predictions')
+                .select('answer')
+                .eq('question_id', 'bq1');
+
+            if (error || !data) return;
+
+            const counts = {};
+            data.forEach(d => counts[d.answer] = (counts[d.answer] || 0) + 1);
+            const sorted = Object.entries(counts)
+                .map(([answer, votes]) => ({ answer, votes }))
+                .sort((a, b) => b.votes - a.votes);
+            renderBQ1(sorted);
+        }
+
+        function renderBQ1(data) {
+            const total = data.reduce((s, d) => s + d.votes, 0);
+            const maxVotes = data[0]?.votes || 1;
+            const topNation = data[0]?.answer || '—';
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-nations').textContent = data.length;
+            document.getElementById('stat-toppick').textContent = topNation;
+            document.getElementById('ops-count').textContent = `${total} USERS VOTED`;
+
+            const list = document.getElementById('nations-list');
+            list.innerHTML = '';
+
+            data.forEach((item, i) => {
+                const pct = Math.round((item.votes / total) * 100);
+                const barPct = Math.round((item.votes / maxVotes) * 100);
+                const isTop = i === 0;
+                const row = document.createElement('div');
+                row.className = `nation-row${isTop ? ' top-pick' : ''}`;
+                row.innerHTML = `
+                    <div class="row-fill" data-fill="${barPct}"></div>
+                    <span class="row-rank">${isTop ? '★' : i + 1}</span>
+                    <span class="row-name">${item.answer}</span>
+                    ${isTop ? '<span class="crown-badge">FAVOURITE</span>' : ''}
+                    <div class="row-bar-wrap">
+                        <div class="row-bar-bg">
+                            <div class="row-bar-inner" data-target="${barPct}"></div>
+                        </div>
+                        <div class="row-pts-wrap">
+                            <span class="row-pct">${pct}%</span>
+                            <span class="row-votes">${item.votes}v</span>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    document.querySelectorAll('.row-bar-inner').forEach(b => b.style.width = b.dataset.target + '%');
+                    document.querySelectorAll('.row-fill').forEach(f => f.style.width = f.dataset.fill + '%');
+                }, 80);
+            });
+        }
+
+        // --- LIVE RADAR ---
         setInterval(async () => {
             if (!currentPlayerId || !currentPassphrase) return;
 
@@ -1070,38 +1532,28 @@
 
             let needsUIRefresh = false;
 
-            // 1. Check auf neue Spielstände/Status
             if (!matchesRes.error && matchesRes.data) {
                 const hasMatchUpdate = matchesRes.data.some((newM, i) => {
-                    const oldM = currentMatches[i]; // GEFIXT: currentMatches
+                    const oldM = currentMatches[i];
                     return oldM && (oldM.status !== newM.status || oldM.home_score !== newM.home_score || oldM.away_score !== newM.away_score);
                 });
-                if (hasMatchUpdate) {
-                    currentMatches = matchesRes.data; // GEFIXT: currentMatches
-                    needsUIRefresh = true;
-                }
+                if (hasMatchUpdate) { currentMatches = matchesRes.data; needsUIRefresh = true; }
             }
 
-            // 2. Check auf neu berechnete Punkte
             if (!predRes.error && predRes.data) {
                 const hasPointsUpdate = predRes.data.some(newP => {
                     const oldP = currentPredictions.find(p => p.match_id === newP.match_id);
                     return oldP && oldP.points_earned !== newP.points_earned;
                 });
-                if (hasPointsUpdate) {
-                    currentPredictions = predRes.data;
-                    needsUIRefresh = true;
-                }
+                if (hasPointsUpdate) { currentPredictions = predRes.data; needsUIRefresh = true; }
             }
 
-            // 3. Check auf neuen Gesamt-Score & Rang
             if (!playerRes.error && playerRes.data && playerRes.data[0]) {
                 const newPlayerData = playerRes.data[0];
                 const scoreChanged = document.getElementById('user-score').innerText !== newPlayerData.score.toString();
-                
                 if (scoreChanged) {
                     document.getElementById('user-score').innerText = newPlayerData.score;
-                    if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { // GEFIXT: view-leaderboard
+                    if (!document.getElementById('view-leaderboard').classList.contains('hidden')) {
                         await fetchLeaderboard(); 
                     }
                     needsUIRefresh = true;
@@ -1111,15 +1563,10 @@
             if (!trendsRes.error) currentTrends = trendsRes.data;
 
             if (needsUIRefresh) {
-                if (!document.getElementById('view-matches').classList.contains('hidden')) { // GEFIXT: view-matches
-                    renderMatches();
-                }
-                if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { // GEFIXT: view-leaderboard
-                    renderCurrentLeaderboardView();
-                }
+                if (!document.getElementById('view-matches').classList.contains('hidden')) { renderMatches(); }
+                if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { renderCurrentLeaderboardView(); }
             }
         }, 60000); 
-
 
     </script>
 </body>
