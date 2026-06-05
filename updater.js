@@ -309,14 +309,5 @@ async function runUpdate() {
     }
 }
 
-// --- STARTUP LOOP ---
-async function startLoop() {
-    const cycles = 3;
-    const waitTime = 60 * 1000;
-    for (let i = 1; i <= cycles; i++) {
-        await runUpdate();
-        if (i < cycles) await delay(waitTime);
-    }
-}
-
-startLoop();
+// --- STARTUP ---
+runUpdate();
