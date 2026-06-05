@@ -11,60 +11,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
 
-    <!-- NEU: Fonts für Radar Modal -->
+    <!-- Font für WC Winner Modal -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- NEU: CSS für Radar Button + Modal -->
+    <!-- CSS für WC Winner Modal -->
     <style>
-        /* ── RADAR BUTTON ── */
-        .radar-btn {
-            position: relative;
-            width: 52px;
-            height: 52px;
-            background: #111;
-            border: 1px solid #2d2d2d;
-            border-radius: 10px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 3px;
-            transition: border-color 0.2s, background 0.2s;
-            overflow: hidden;
-        }
-        .radar-btn:hover { border-color: #166534; background: #161a14; }
-        .radar-btn:active { transform: scale(0.95); }
-        .radar-btn .btn-label {
-            font-size: 7px;
-            color: #555;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            transition: color 0.2s;
-            line-height: 1;
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .radar-btn:hover .btn-label { color: #16a34a; }
-        .radar-svg { width: 28px; height: 28px; }
-
-        @keyframes radar-sweep-btn {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
-        }
-        .sweep-btn {
-            transform-origin: 50% 50%;
-            animation: radar-sweep-btn 3s linear infinite;
-        }
-        @keyframes ping-btn {
-            0%   { r: 0; opacity: 0.8; }
-            100% { r: 10; opacity: 0; }
-        }
-        .ping-btn { animation: ping-btn 3s ease-out infinite; }
-
         /* ── MODAL OVERLAY ── */
         #intel-modal {
             position: fixed;
@@ -107,35 +62,12 @@
             background: #080807;
             border-bottom: 1px solid #1e1e1e;
             padding: 24px 20px 20px;
-            overflow: hidden;
             flex-shrink: 0;
-        }
-        .modal-header::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(
-                0deg, transparent, transparent 3px,
-                rgba(0,0,0,0.12) 3px, rgba(0,0,0,0.12) 4px
-            );
-            pointer-events: none;
-            z-index: 2;
-        }
-        .header-glow {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 220px; height: 220px;
-            background: radial-gradient(circle, rgba(22,163,74,0.12) 0%, transparent 70%);
-            pointer-events: none;
         }
         .header-top {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            position: relative;
-            z-index: 3;
-            margin-bottom: 20px;
         }
         .header-eyebrow {
             font-size: 9px;
@@ -143,7 +75,6 @@
             letter-spacing: 0.25em;
             text-transform: uppercase;
             margin-bottom: 4px;
-            font-family: 'Share Tech Mono', monospace;
         }
         .header-title {
             font-family: 'Bebas Neue', sans-serif;
@@ -159,7 +90,6 @@
             letter-spacing: 0.2em;
             text-transform: uppercase;
             margin-top: 4px;
-            font-family: 'Share Tech Mono', monospace;
         }
         .intel-close-btn {
             background: #1c1917;
@@ -175,55 +105,6 @@
             flex-shrink: 0;
         }
         .intel-close-btn:hover { color: #f5f5f4; border-color: #44403c; }
-        .radar-display {
-            display: flex;
-            justify-content: center;
-            position: relative;
-            z-index: 3;
-        }
-        .big-radar { width: 160px; height: 160px; }
-        @keyframes radar-sweep {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
-        }
-        .sweep-arm {
-            transform-origin: 80px 80px;
-            animation: radar-sweep 4s linear infinite;
-        }
-        @keyframes blip-pulse {
-            0%   { opacity: 0; r: 2; }
-            20%  { opacity: 1; r: 3.5; }
-            100% { opacity: 0; r: 2; }
-        }
-        .blip { animation: blip-pulse 4s ease-in-out infinite; }
-        .blip-1 { animation-delay: 0.2s; }
-        .blip-2 { animation-delay: 1.1s; }
-        .blip-3 { animation-delay: 2.3s; }
-        .blip-4 { animation-delay: 3.0s; }
-        .blip-5 { animation-delay: 0.7s; }
-        .ops-badge {
-            position: absolute;
-            bottom: 8px; right: 20px;
-            font-size: 8px;
-            color: #44403c;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            z-index: 3;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .live-dot {
-            width: 5px; height: 5px;
-            background: #16a34a;
-            border-radius: 50%;
-        }
-        @keyframes live-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50%       { opacity: 0.3; transform: scale(0.7); }
-        }
-        .live-dot { animation: live-pulse 2s ease-in-out infinite; }
 
         /* ── MODAL BODY ── */
         .modal-body {
@@ -242,7 +123,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-family: 'Share Tech Mono', monospace;
         }
         .section-label::after {
             content: '';
