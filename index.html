@@ -29,34 +29,54 @@
 
     <div id="dashboard" class="hidden max-w-lg mx-auto bg-stone-950 min-h-screen shadow-2xl relative border-x border-stone-800">
         
-        <header class="bg-stone-900 text-stone-200 p-6 shadow-md border-b border-stone-800 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-green-900 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
-            
-            <div class="absolute top-6 right-6 flex items-center gap-3 z-20">
-                <img src="Wappen.png" alt="Logo" class="w-20 h-24 object-contain drop-shadow-lg">
+        <header class="bg-stone-900 text-stone-200 border-b border-stone-800 shadow-md relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-green-900 rounded-full blur-3xl opacity-10 -mr-10 -mt-10 pointer-events-none"></div>
+
+            <!-- Top bar: Branding + Logo -->
+            <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-stone-800/50">
+                <div>
+                    <p class="text-[10px] text-stone-500 uppercase tracking-widest font-bold mb-0.5">Prediction Game</p>
+                    <h1 class="text-2xl font-black tracking-tighter text-stone-100 leading-none">MN BG LTU: <span class="text-green-500">WorldCup '26</span></h1>
+                </div>
+                <img src="Wappen.png" alt="Logo" class="w-14 h-16 object-contain drop-shadow-lg flex-shrink-0">
             </div>
 
-            <h1 class="text-3xl font-black tracking-tighter mb-1 text-stone-100 pr-24">MN BG LTU: <br/><span class="text-green-600">WorldCup '26</span></h1>
-            <p class="text-stone-500 text-xs tracking-widest uppercase font-bold">Prediction Game</p>
-            <div class="mt-6 flex justify-between items-end relative z-10">
-                <div>
-                    <p class="text-xs text-stone-500 mb-1 uppercase tracking-wider font-bold">User:</p>
-                    <p id="user-nickname" class="text-lg font-black bg-stone-800 inline-block px-3 py-1 rounded-md border border-stone-700 text-green-500 shadow-inner"></p>
-                    <button id="btn-edit-bonus" onclick="openAllBonusModal()" class="hidden ml-3 bg-stone-800 text-stone-400 hover:text-green-400 text-[9px] px-2 py-1 rounded border border-stone-700 uppercase font-bold tracking-widest transition-colors shadow-sm">Edit BonusQuestions</button>
+            <!-- Bottom bar: User + Actions + Score -->
+            <div class="flex items-center justify-between px-5 py-3 gap-3 relative z-10">
+
+                <!-- User info -->
+                <div class="flex flex-col gap-1 min-w-0">
+                    <p class="text-[10px] text-stone-500 uppercase tracking-wider font-bold">User</p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <p id="user-nickname" class="text-base font-black bg-stone-800 px-3 py-1 rounded-md border border-stone-700 text-green-500 shadow-inner truncate max-w-[140px]"></p>
+                        <button id="btn-edit-bonus" onclick="openAllBonusModal()" class="hidden bg-stone-800 text-stone-400 hover:text-green-400 text-[9px] px-2 py-1 rounded border border-stone-700 uppercase font-bold tracking-widest transition-colors shadow-sm whitespace-nowrap">Edit BQ</button>
+                    </div>
                 </div>
-                <div class="flex flex-col items-end gap-2">
+
+                <!-- Right side: icon buttons + score -->
+                <div class="flex items-center gap-3 flex-shrink-0">
+
+                    <!-- Icon buttons -->
                     <div class="flex items-center gap-2">
-                        <button onclick="openIntelModal()" class="text-stone-400 hover:text-green-400 transition-colors px-2 py-1 bg-stone-800 rounded-lg border border-stone-700 shadow-md focus:outline-none text-[9px] font-bold uppercase tracking-widest">WC Win</button>
+                        <!-- WC Winner Button — Trophy icon -->
+                        <button onclick="openIntelModal()" title="Who wins the Cup?" class="text-stone-400 hover:text-green-400 transition-colors p-2 bg-stone-800 rounded-full border border-stone-700 shadow-md focus:outline-none focus:ring-2 focus:ring-green-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 21h8m-4-4v4M7 3H5a2 2 0 00-2 2v3c0 2.8 1.8 5.2 4.5 6.2M17 3h2a2 2 0 012 2v3c0 2.8-1.8 5.2-4.5 6.2M7 3h10v6a5 5 0 01-10 0V3z"/>
+                            </svg>
+                        </button>
+                        <!-- Reload Button -->
                         <button onclick="window.location.reload()" class="text-stone-400 hover:text-white transition-colors p-2 bg-stone-800 rounded-full border border-stone-700 shadow-md focus:outline-none focus:ring-2 focus:ring-green-600">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                         </button>
                     </div>
+
+                    <!-- Score -->
                     <div class="text-right cursor-pointer group" onclick="openScoreBreakdown()">
-                        <p class="text-[10px] text-stone-500 mb-1 uppercase tracking-wider font-bold flex items-center justify-end gap-1 group-hover:text-stone-300 transition-colors">
-                            Total Score
+                        <p class="text-[10px] text-stone-500 uppercase tracking-wider font-bold flex items-center justify-end gap-1 group-hover:text-stone-300 transition-colors mb-0.5">
+                            Score
                             <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </p>
-                        <p id="user-score" class="text-4xl font-black text-stone-100 group-active:text-green-500 transition-colors">0</p>
+                        <p id="user-score" class="text-4xl font-black text-stone-100 group-active:text-green-500 transition-colors leading-none">0</p>
                     </div>
                 </div>
             </div>
