@@ -496,7 +496,7 @@
             const subFilterContainer = document.createElement('div');
             subFilterContainer.id = 'sub-filter-bar'; 
             subFilterContainer.style.scrollbarWidth = 'none'; 
-            subFilterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 mb-4 border-b border-stone-800 snap-x';
+            subFilterContainer.className = 'flex overflow-x-auto space-x-2 pb-3 pt-1 mb-4 border-b border-stone-800 snap-x';
             
             let filteredMatches = [];
 
@@ -512,7 +512,7 @@
                     const shortDate = btnDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
                     const isActive = dateStr === activeDate;
                     const btn = document.createElement('button');
-                    btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`;
+                    btn.className = `snap-center flex-shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-xl border transition-all ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`;
                     btn.onclick = () => { activeDate = dateStr; renderMatches(); };
                     btn.innerHTML = `<span class="text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-green-300' : 'text-stone-500'}">${shortDay}</span><span class="text-sm font-black">${shortDate}</span>`;
                     subFilterContainer.appendChild(btn);
@@ -525,7 +525,7 @@
                 groups.forEach(g => {
                     const isActive = g === activeGroup;
                     const btn = document.createElement('button');
-                    btn.className = `snap-center flex-shrink-0 px-5 py-3 rounded-xl border transition-all font-black text-sm uppercase tracking-widest ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800'}`;
+                    btn.className = `snap-center flex-shrink-0 px-5 py-3 rounded-xl border transition-all font-black text-sm uppercase tracking-widest ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800'}`;
                     btn.onclick = () => { activeGroup = g; renderMatches(); };
                     btn.innerText = `Grp ${g}`;
                     subFilterContainer.appendChild(btn);
@@ -541,7 +541,7 @@
                     koStages.forEach(s => {
                         const isActive = s === activeStage;
                         const btn = document.createElement('button');
-                        btn.className = `snap-center flex-shrink-0 px-5 py-3 rounded-xl border transition-all font-black text-sm uppercase tracking-widest ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg transform scale-105' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800'}`;
+                        btn.className = `snap-center flex-shrink-0 px-5 py-3 rounded-xl border transition-all font-black text-sm uppercase tracking-widest ${isActive ? 'bg-green-900 border-green-700 text-white shadow-lg' : 'bg-stone-900 border-stone-800 text-stone-500 hover:bg-stone-800'}`;
                         btn.onclick = () => { activeStage = s; renderMatches(); };
                         btn.innerText = formatStageName(s);
                         subFilterContainer.appendChild(btn);
