@@ -11,270 +11,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
 
-    <!-- Font für WC Winner Modal -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- CSS für WC Winner Modal -->
-    <style>
-        /* ── MODAL OVERLAY ── */
-        #intel-modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0);
-            z-index: 200;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            pointer-events: none;
-            transition: background 0.35s ease;
-        }
-        #intel-modal.open {
-            background: rgba(0,0,0,0.88);
-            pointer-events: all;
-            backdrop-filter: blur(4px);
-        }
-
-        /* ── MODAL SHEET ── */
-        #intel-sheet {
-            width: 100%;
-            max-width: 480px;
-            max-height: 92vh;
-            background: #0f0e0d;
-            border-top: 1px solid #2a2a2a;
-            border-left: 1px solid #2a2a2a;
-            border-right: 1px solid #2a2a2a;
-            border-radius: 20px 20px 0 0;
-            overflow: hidden;
-            transform: translateY(100%);
-            transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex;
-            flex-direction: column;
-        }
-        #intel-modal.open #intel-sheet { transform: translateY(0); }
-
-        /* ── MODAL HEADER ── */
-        .modal-header {
-            position: relative;
-            background: #080807;
-            border-bottom: 1px solid #1e1e1e;
-            padding: 24px 20px 20px;
-            flex-shrink: 0;
-        }
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        .header-eyebrow {
-            font-size: 9px;
-            color: #4ade80;
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-        .header-title {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 28px;
-            color: #f5f5f4;
-            letter-spacing: 0.05em;
-            line-height: 1;
-        }
-        .header-title span { color: #4ade80; }
-        .header-sub {
-            font-size: 8px;
-            color: #44403c;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            margin-top: 4px;
-        }
-        .intel-close-btn {
-            background: #1c1917;
-            border: 1px solid #292524;
-            color: #78716c;
-            width: 32px; height: 32px;
-            border-radius: 8px;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: color 0.2s, border-color 0.2s;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-        .intel-close-btn:hover { color: #f5f5f4; border-color: #44403c; }
-
-        /* ── MODAL BODY ── */
-        .modal-body {
-            overflow-y: auto;
-            flex: 1;
-            padding: 16px;
-            scrollbar-width: none;
-        }
-        .modal-body::-webkit-scrollbar { display: none; }
-        .section-label {
-            font-size: 8px;
-            color: #44403c;
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .section-label::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #1e1e1e;
-        }
-        .nation-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            background: #111;
-            border: 1px solid #1e1e1e;
-            border-radius: 10px;
-            margin-bottom: 6px;
-            position: relative;
-            overflow: hidden;
-            cursor: default;
-            transition: border-color 0.15s;
-        }
-        .nation-row:hover { border-color: #2d2d2d; }
-        .nation-row.top-pick { border-color: #166534; background: #0b130d; }
-        .nation-row.top-pick:hover { border-color: #15803d; }
-        .row-fill {
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            background: linear-gradient(90deg, rgba(22,101,52,0.18) 0%, transparent 100%);
-            width: 0%;
-            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
-            border-radius: 10px;
-        }
-        .top-pick .row-fill {
-            background: linear-gradient(90deg, rgba(22,163,74,0.15) 0%, transparent 100%);
-        }
-        .row-rank {
-            font-size: 9px;
-            color: #44403c;
-            width: 16px;
-            text-align: center;
-            flex-shrink: 0;
-            position: relative;
-            z-index: 1;
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .top-pick .row-rank { color: #4ade80; }
-        .row-name {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 18px;
-            color: #d6d3d1;
-            letter-spacing: 0.05em;
-            flex: 1;
-            position: relative;
-            z-index: 1;
-            line-height: 1;
-        }
-        .top-pick .row-name { color: #f5f5f4; }
-        .row-bar-wrap {
-            width: 80px;
-            flex-shrink: 0;
-            position: relative;
-            z-index: 1;
-        }
-        .row-bar-bg {
-            height: 3px;
-            background: #1e1e1e;
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 3px;
-        }
-        .row-bar-inner {
-            height: 100%;
-            width: 0%;
-            background: #16a34a;
-            border-radius: 2px;
-            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .top-pick .row-bar-inner { background: #4ade80; }
-        .row-pct {
-            font-size: 9px;
-            color: #4ade80;
-            text-align: right;
-            letter-spacing: 0.05em;
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .row-votes {
-            font-size: 8px;
-            color: #44403c;
-            text-align: right;
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .row-pts-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 1px;
-            position: relative;
-            z-index: 1;
-        }
-        .crown-badge {
-            font-size: 7px;
-            background: #166534;
-            color: #4ade80;
-            border: 1px solid #15803d;
-            padding: 2px 5px;
-            border-radius: 4px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            position: relative;
-            z-index: 1;
-            flex-shrink: 0;
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .stats-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-top: 16px;
-            margin-bottom: 4px;
-        }
-        .stat-cell {
-            background: #111;
-            border: 1px solid #1e1e1e;
-            border-radius: 10px;
-            padding: 10px 8px;
-            text-align: center;
-        }
-        .stat-label {
-            font-size: 7px;
-            color: #44403c;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            font-family: 'Share Tech Mono', monospace;
-        }
-        .stat-value {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 22px;
-            color: #4ade80;
-            line-height: 1;
-        }
-        .stat-value.muted { color: #78716c; }
-        .ticker {
-            font-size: 8px;
-            color: #292524;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            text-align: center;
-            padding: 12px 0 6px;
-            font-family: 'Share Tech Mono', monospace;
-        }
-    </style>
 </head>
 <body class="bg-stone-950 text-stone-300 font-sans antialiased selection:bg-green-900 selection:text-white">
 
@@ -368,7 +106,7 @@
                         <thead>
                             <tr class="bg-stone-950 text-stone-500 text-[10px] uppercase tracking-widest">
                                 <th class="p-4 font-black border-b border-stone-800 w-16 text-center">Rank</th>
-                                <th class="p-4 font-black border-b border-stone-800">User</th>
+                                <th class="p-4 font-black border-b border-stone-800">Operative</th>
                                 <th class="p-4 font-black border-b border-stone-800 text-right">Score</th>
                             </tr>
                         </thead>
@@ -476,22 +214,30 @@
     </div>
 
     <!-- NEU: WC WINNER MODAL -->
-    <div id="intel-modal" onclick="handleModalClick(event)">
-        <div id="intel-sheet">
-            <div class="modal-header">
-                <div class="header-top">
-                    <div>
-                        <p class="header-eyebrow">// BQ 1 · WORLD CUP WINNER //</p>
-                        <h2 class="header-title">WHO WINS <span>THE CUP?</span></h2>
-                        <p class="header-sub">HOW USERS VOTED · LOCKED PREDICTIONS</p>
-                    </div>
-                    <button class="intel-close-btn" onclick="closeIntelModal()">×</button>
+    <div id="intel-modal" class="fixed inset-0 z-[200] flex items-end justify-center pointer-events-none" style="background:rgba(0,0,0,0);transition:background 0.35s ease;" onclick="handleModalClick(event)">
+        <div id="intel-sheet" class="w-full max-w-lg bg-stone-900 border-t border-x border-stone-800 rounded-t-2xl shadow-2xl flex flex-col overflow-hidden" style="max-height:92vh;transform:translateY(100%);transition:transform 0.45s cubic-bezier(0.16,1,0.3,1);">
+
+            <!-- Header -->
+            <div class="p-5 border-b border-stone-800 flex justify-between items-center bg-stone-950">
+                <div>
+                    <p class="text-[10px] text-green-500 font-bold uppercase tracking-widest mb-1">BQ 1 · World Cup Winner</p>
+                    <h2 class="text-xl font-black tracking-widest uppercase text-stone-100">Who wins <span class="text-green-500">the Cup?</span></h2>
+                    <p class="text-[10px] text-stone-500 uppercase tracking-widest font-bold mt-1">How users voted · Locked predictions</p>
                 </div>
+                <button onclick="closeIntelModal()" class="text-stone-500 hover:text-stone-100 font-bold text-3xl leading-none px-2 transition-colors">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="section-label" style="margin-top:4px;">WHO DO USERS THINK WINS THE WORLD CUP?</div>
-                <div id="nations-list"></div>
-                <p class="ticker">BASED ON LOCKED BQ 1 ANSWERS · ALL USERS · WC 2026</p>
+
+            <!-- Body -->
+            <div class="p-4 overflow-y-auto flex-1" style="scrollbar-width:none;">
+
+                <div class="text-[10px] text-stone-600 uppercase tracking-widest font-bold mb-3 flex items-center gap-2">
+                    <span>Who do users think wins the World Cup?</span>
+                    <span class="flex-1 h-px bg-stone-800 block"></span>
+                </div>
+
+                <div id="nations-list" class="space-y-2"></div>
+
+                <p class="text-[9px] text-stone-700 uppercase tracking-widest text-center mt-4 font-mono">Based on locked BQ 1 answers · All users · WC 2026</p>
             </div>
         </div>
     </div>
@@ -1165,24 +911,24 @@
                 if(allPlayersCached.length >= 3) {
                     pc.innerHTML = `
                         <div class="flex flex-col items-center w-28">
-                            <span class="text-[10px] font-bold text-stone-400 mb-1 truncate w-full text-center px-1">${allPlayersCached[1].nickname}</span>
+                            <span class="text-[10px] font-bold text-stone-400 mb-1 truncate w-full text-center px-1">${esc(allPlayersCached[1].nickname)}</span>
                             <div class="w-full h-24 bg-stone-800 border-t-4 border-stone-500 rounded-t-lg flex flex-col items-center justify-start pt-2 shadow-inner">
                                 <span class="font-black text-3xl text-stone-600 leading-none">2</span>
-                                <span class="text-[12px] font-black text-stone-400 mt-1 tracking-widest">${allPlayersCached[1].score} PTS</span>
+                                <span class="text-[12px] font-black text-stone-400 mt-1 tracking-widest">${esc(allPlayersCached[1].score)} PTS</span>
                             </div>
                         </div>
                         <div class="flex flex-col items-center w-32 z-10 -mx-2">
-                            <span class="text-xs font-black text-amber-500 mb-1 truncate w-full text-center px-1">${allPlayersCached[0].nickname}</span>
+                            <span class="text-xs font-black text-amber-500 mb-1 truncate w-full text-center px-1">${esc(allPlayersCached[0].nickname)}</span>
                             <div class="w-full h-32 bg-amber-900/30 border-t-4 border-amber-500 rounded-t-lg flex flex-col items-center justify-start pt-3 shadow-2xl">
                                 <span class="font-black text-4xl text-amber-600 leading-none">1</span>
-                                <span class="text-[14px] font-black text-amber-500 mt-1 tracking-widest">${allPlayersCached[0].score} PTS</span>
+                                <span class="text-[14px] font-black text-amber-500 mt-1 tracking-widest">${esc(allPlayersCached[0].score)} PTS</span>
                             </div>
                         </div>
                         <div class="flex flex-col items-center w-28">
-                            <span class="text-[10px] font-bold text-orange-700 mb-1 truncate w-full text-center px-1">${allPlayersCached[2].nickname}</span>
+                            <span class="text-[10px] font-bold text-orange-700 mb-1 truncate w-full text-center px-1">${esc(allPlayersCached[2].nickname)}</span>
                             <div class="w-full h-20 bg-stone-800 border-t-4 border-orange-800 rounded-t-lg flex flex-col items-center justify-start pt-2 shadow-inner">
                                 <span class="font-black text-3xl text-stone-600 leading-none">3</span>
-                                <span class="text-[12px] font-black text-stone-400 mt-1 tracking-widest">${allPlayersCached[2].score} PTS</span>
+                                <span class="text-[12px] font-black text-stone-400 mt-1 tracking-widest">${esc(allPlayersCached[2].score)} PTS</span>
                             </div>
                         </div>`;
                     pc.classList.remove('hidden');
@@ -1231,11 +977,7 @@
                     ? `<span class="ml-2 text-[8px] font-bold text-green-600 uppercase tracking-widest border border-green-900 px-1 py-0.5 rounded">WIN</span>`
                     : '';
 
-                tr.innerHTML = `
-                    <td class="p-4 text-center text-xs">${rankDisplay}</td>
-                    <td class="p-4 text-stone-300 font-medium">${p.nickname}${winBadge}</td>
-                    <td class="p-4 text-right text-stone-100 font-black">${p.score}</td>
-                `;
+                tr.innerHTML = `<td class="p-4 text-center text-xs">${rankDisplay}</td><td class="p-4 text-stone-300 font-medium">${esc(p.nickname)}${winBadge}</td><td class="p-4 text-right text-stone-100 font-black">${p.score}</td>`;
                 ll.appendChild(tr);
             });
         }
@@ -1293,13 +1035,23 @@
         let bq1Loaded = false;
 
         function openIntelModal() {
-            document.getElementById('intel-modal').classList.add('open');
+            const modal = document.getElementById('intel-modal');
+            const sheet = document.getElementById('intel-sheet');
+            modal.style.background = 'rgba(0,0,0,0.88)';
+            modal.style.pointerEvents = 'all';
+            modal.style.backdropFilter = 'blur(4px)';
+            sheet.style.transform = 'translateY(0)';
             document.body.style.overflow = 'hidden';
             if (!bq1Loaded) { loadBQ1Data(); bq1Loaded = true; }
         }
 
         function closeIntelModal() {
-            document.getElementById('intel-modal').classList.remove('open');
+            const modal = document.getElementById('intel-modal');
+            const sheet = document.getElementById('intel-sheet');
+            modal.style.background = 'rgba(0,0,0,0)';
+            modal.style.pointerEvents = 'none';
+            modal.style.backdropFilter = 'none';
+            sheet.style.transform = 'translateY(100%)';
             document.body.style.overflow = '';
         }
 
@@ -1334,21 +1086,23 @@
                 const pct = Math.round((item.votes / total) * 100);
                 const barPct = Math.round((item.votes / maxVotes) * 100);
                 const isTop = i === 0;
+
                 const row = document.createElement('div');
-                row.className = `nation-row${isTop ? ' top-pick' : ''}`;
+                row.className = `bg-stone-900 border ${isTop ? 'border-green-800 bg-green-950/20' : 'border-stone-800'} rounded-xl p-3 relative overflow-hidden transition-colors`;
+
                 row.innerHTML = `
-                    <div class="row-fill" data-fill="${barPct}"></div>
-                    <span class="row-rank">${isTop ? '★' : i + 1}</span>
-                    <span class="row-name">${item.answer}</span>
-                    ${isTop ? '<span class="crown-badge">FAVOURITE</span>' : ''}
-                    <div class="row-bar-wrap">
-                        <div class="row-bar-bg">
-                            <div class="row-bar-inner" data-target="${barPct}"></div>
+                    <div class="absolute left-0 top-0 bottom-0 rounded-xl transition-all duration-700" style="width:${barPct}%;background:${isTop ? 'rgba(22,163,74,0.08)' : 'rgba(255,255,255,0.02)'}"></div>
+                    <div class="relative flex items-center gap-3">
+                        <span class="text-[10px] font-bold w-5 text-center flex-shrink-0 ${isTop ? 'text-green-500' : 'text-stone-600'}">${isTop ? '★' : i + 1}</span>
+                        <span class="font-black text-sm flex-1 ${isTop ? 'text-stone-100' : 'text-stone-300'} uppercase tracking-wide">${esc(item.answer)}</span>
+                        ${isTop ? '<span class="text-[9px] bg-green-900 text-green-400 border border-green-800 px-2 py-0.5 rounded font-bold uppercase tracking-widest flex-shrink-0">Favourite</span>' : ''}
+                        <div class="flex flex-col items-end flex-shrink-0">
+                            <span class="text-[11px] font-black ${isTop ? 'text-green-500' : 'text-stone-400'}">${pct}%</span>
+                            <span class="text-[9px] text-stone-600 font-mono">${item.votes}v</span>
                         </div>
-                        <div class="row-pts-wrap">
-                            <span class="row-pct">${pct}%</span>
-                            <span class="row-votes">${item.votes}v</span>
-                        </div>
+                    </div>
+                    <div class="relative mt-2 h-1 bg-stone-800 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-700 ${isTop ? 'bg-green-500' : 'bg-stone-600'}" style="width:0%" data-target="${barPct}"></div>
                     </div>
                 `;
                 list.appendChild(row);
@@ -1356,8 +1110,7 @@
 
             requestAnimationFrame(() => {
                 setTimeout(() => {
-                    document.querySelectorAll('.row-bar-inner').forEach(b => b.style.width = b.dataset.target + '%');
-                    document.querySelectorAll('.row-fill').forEach(f => f.style.width = f.dataset.fill + '%');
+                    document.querySelectorAll('#nations-list [data-target]').forEach(b => b.style.width = b.dataset.target + '%');
                 }, 80);
             });
         }
