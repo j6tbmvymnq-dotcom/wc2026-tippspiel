@@ -45,10 +45,10 @@
             <div class="flex items-center justify-between px-5 py-3 gap-3 relative z-10">
 
                 <!-- User info -->
-                <div class="flex flex-col gap-1 min-w-0">
+                <div class="flex flex-col gap-1 min-w-0 flex-1">
                     <p class="text-[10px] text-stone-500 uppercase tracking-wider font-bold">User</p>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <p id="user-nickname" class="text-base font-black bg-stone-800 px-3 py-1 rounded-md border border-stone-700 text-green-500 shadow-inner truncate max-w-[140px]"></p>
+                        <p id="user-nickname" class="text-base font-black bg-stone-800 px-3 py-1 rounded-md border border-stone-700 text-green-500 shadow-inner truncate max-w-[180px]"></p>
                         <button id="btn-edit-bonus" onclick="openAllBonusModal()" class="hidden bg-stone-800 text-stone-400 hover:text-green-400 text-[9px] px-2 py-1 rounded border border-stone-700 uppercase font-bold tracking-widest transition-colors shadow-sm whitespace-nowrap">Edit BQ</button>
                     </div>
                 </div>
@@ -70,13 +70,13 @@
                         </button>
                     </div>
 
-                    <!-- Score -->
-                    <div class="text-right cursor-pointer group" onclick="openScoreBreakdown()">
+                    <!-- Score — min-width ensures space for 3-digit scores -->
+                    <div class="text-right cursor-pointer group min-w-[52px]" onclick="openScoreBreakdown()">
                         <p class="text-[10px] text-stone-500 uppercase tracking-wider font-bold flex items-center justify-end gap-1 group-hover:text-stone-300 transition-colors mb-0.5">
                             Score
                             <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </p>
-                        <p id="user-score" class="text-4xl font-black text-stone-100 group-active:text-green-500 transition-colors leading-none">0</p>
+                        <p id="user-score" class="text-4xl font-black text-stone-100 group-active:text-green-500 transition-colors leading-none tabular-nums">0</p>
                     </div>
                 </div>
             </div>
