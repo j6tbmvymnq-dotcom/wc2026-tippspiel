@@ -2,7 +2,7 @@ name: WM 2026 Live Updater
 
 on:
   schedule:
-    - cron: '*/120 * * * *'
+    - cron: '*/1440 * * * *'
   workflow_dispatch:
 
 jobs:
