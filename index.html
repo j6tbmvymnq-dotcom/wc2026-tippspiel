@@ -518,7 +518,22 @@
                 const datesMap = new Set();
                 currentMatches.forEach(m => { datesMap.add(getVilniusDateStr(m.kickoff)); });
                 const dates = Array.from(datesMap).sort();
-                if (!activeDate || !dates.includes(activeDate)) activeDate = dates[0];
+
+                // Beim ersten Laden: Tag mit Live-Spiel bevorzugen, sonst heute, sonst nächster Spieltag
+                if (!activeDate || !dates.includes(activeDate)) {
+                    const todayStr = getVilniusDateStr(new Date().toISOString());
+
+                    // Läuft gerade ein Spiel? Dann dessen Tag wählen
+                    const liveMatch = currentMatches.find(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
+                    if (liveMatch) {
+                        activeDate = getVilniusDateStr(liveMatch.kickoff);
+                    } else if (dates.includes(todayStr)) {
+                        activeDate = todayStr;
+                    } else {
+                        const upcoming = dates.find(d => d >= todayStr);
+                        activeDate = upcoming || dates[dates.length - 1];
+                    }
+                }
 
                 dates.forEach(dateStr => {
                     const btnDate = new Date(`${dateStr}T12:00:00Z`); 
@@ -769,10 +784,17 @@
 
             vm.appendChild(listContainer);
 
-            setTimeout(() => {
+            // Aktiven Filter-Button horizontal in die Mitte scrollen (nur den Container, nicht die Seite)
+            requestAnimationFrame(() => {
                 const activeBtn = subFilterContainer.querySelector('.bg-green-900');
-                if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }, 10);
+                if (activeBtn) {
+                    const containerWidth = subFilterContainer.offsetWidth;
+                    const btnLeft = activeBtn.offsetLeft;
+                    const btnWidth = activeBtn.offsetWidth;
+                    const targetScroll = btnLeft - (containerWidth / 2) + (btnWidth / 2);
+                    subFilterContainer.scrollTo({ left: targetScroll, behavior: 'smooth' });
+                }
+            });
         }
 
         async function savePrediction(matchId) {
