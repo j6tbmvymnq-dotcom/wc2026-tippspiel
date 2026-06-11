@@ -126,7 +126,7 @@
                         <thead>
                             <tr class="bg-stone-950 text-stone-500 text-[10px] uppercase tracking-widest">
                                 <th class="p-4 font-black border-b border-stone-800 w-16 text-center">Rank</th>
-                                <th class="p-4 font-black border-b border-stone-800">Operative</th>
+                                <th class="p-4 font-black border-b border-stone-800">User</th>
                                 <th class="p-4 font-black border-b border-stone-800 text-right">Score</th>
                             </tr>
                         </thead>
@@ -241,8 +241,7 @@
             <div class="p-5 border-b border-stone-800 flex justify-between items-center bg-stone-950">
                 <div>
                     <p class="text-[10px] text-green-500 font-bold uppercase tracking-widest mb-1">BQ 1 · World Cup Winner</p>
-                    <h2 class="text-xl font-black tracking-widest uppercase text-stone-100">Who wins <span class="text-green-500">the Cup?</span></h2>
-                    <p class="text-[10px] text-stone-500 uppercase tracking-widest font-bold mt-1">How users voted · Locked predictions</p>
+                    <h2 class="text-xl font-black tracking-widest uppercase text-stone-100">Who wins the Cup?</h2>
                 </div>
                 <button onclick="closeIntelModal()" class="text-stone-500 hover:text-stone-100 font-bold text-3xl leading-none px-2 transition-colors">&times;</button>
             </div>
@@ -250,14 +249,9 @@
             <!-- Body -->
             <div class="p-4 overflow-y-auto flex-1" style="scrollbar-width:none;">
 
-                <div class="text-[10px] text-stone-600 uppercase tracking-widest font-bold mb-3 flex items-center gap-2">
-                    <span>Who do users think wins the World Cup?</span>
-                    <span class="flex-1 h-px bg-stone-800 block"></span>
-                </div>
-
                 <div id="nations-list" class="space-y-2"></div>
 
-                <p class="text-[9px] text-stone-700 uppercase tracking-widest text-center mt-4 font-mono">Based on locked BQ 1 answers · All users · WC 2026</p>
+                <p class="text-[9px] text-stone-700 uppercase tracking-widest text-center mt-4 font-mono">Based on locked predictions · All users</p>
             </div>
         </div>
     </div>
@@ -608,7 +602,9 @@
                     const realAway = match.away_score !== null ? match.away_score : '-';
 
                     if (match.status === 'IN_PLAY' || match.status === 'PAUSED') {
-                        statusBadge = `<span class="text-red-500 font-black flex items-center gap-1"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> LIVE</span>`;
+                        const minuteDisplay = match.minute ? ` ${match.minute}'` : '';
+                        const liveLabel = match.status === 'PAUSED' ? 'HALFTIME' : `LIVE${minuteDisplay}`;
+                        statusBadge = `<span class="text-red-500 font-black flex items-center gap-1"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> ${liveLabel}</span>`;
                         cardBorder = 'border-l-4 border-l-red-600';
 
                         const hasLiveET = match.home_score_et !== null && match.away_score_et !== null;
