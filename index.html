@@ -241,7 +241,8 @@
             <div class="p-5 border-b border-stone-800 flex justify-between items-center bg-stone-950">
                 <div>
                     <p class="text-[10px] text-green-500 font-bold uppercase tracking-widest mb-1">BQ 1 · World Cup Winner</p>
-                    <h2 class="text-xl font-black tracking-widest uppercase text-stone-100">Who wins the Cup?</h2>
+                    <h2 class="text-xl font-black tracking-widest uppercase text-stone-100">Who wins <span class="text-green-500">the Cup?</span></h2>
+                    <p class="text-[10px] text-stone-500 uppercase tracking-widest font-bold mt-1">How users voted · Locked predictions</p>
                 </div>
                 <button onclick="closeIntelModal()" class="text-stone-500 hover:text-stone-100 font-bold text-3xl leading-none px-2 transition-colors">&times;</button>
             </div>
@@ -609,15 +610,71 @@
                     if (match.status === 'IN_PLAY' || match.status === 'PAUSED') {
                         statusBadge = `<span class="text-red-500 font-black flex items-center gap-1"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> LIVE</span>`;
                         cardBorder = 'border-l-4 border-l-red-600';
+
+                        const hasLiveET = match.home_score_et !== null && match.away_score_et !== null;
+                        const hasLivePen = match.home_score_pen !== null && match.away_score_pen !== null;
+                        const liveDisplayHome = hasLiveET ? (match.home_score + match.home_score_et) : realHome;
+                        const liveDisplayAway = hasLiveET ? (match.away_score + match.away_score_et) : realAway;
+
+                        let liveExtraInfo = '';
+                        if (hasLivePen) {
+                            liveExtraInfo = `
+                                <div class="flex flex-col items-center gap-0.5 mt-1">
+                                    <span class="text-[9px] text-stone-500 font-mono tracking-widest">(90' ${realHome}:${realAway})</span>
+                                    <span class="text-[9px] text-amber-500/80 font-bold tracking-widest animate-pulse">PEN ${match.home_score_pen}:${match.away_score_pen}</span>
+                                </div>`;
+                        } else if (hasLiveET) {
+                            liveExtraInfo = `<div class="mt-1"><span class="text-[9px] text-red-500/70 font-bold tracking-widest animate-pulse">A.E.T. · (90' ${realHome}:${realAway})</span></div>`;
+                        }
+
+                        middleContent = `
+                            <div class="flex flex-col items-center">
+                                <div class="text-3xl font-black text-stone-100 tracking-widest">${liveDisplayHome} <span class="text-stone-600">:</span> ${liveDisplayAway}</div>
+                                ${liveExtraInfo}
+                            </div>`;
                     } else if (match.status === 'FINISHED') {
                         statusBadge = `<span class="text-green-500 font-black flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> OFFICIAL</span>`;
                         cardBorder = 'border-l-4 border-l-stone-600';
                     } else {
-                        statusBadge = `<span class="text-amber-500 font-bold flex items-center gap-1 animate-pulse">CALCULATING...</span>`;
-                        cardBorder = 'border-l-4 border-l-amber-600';
+                        // Kickoff-basierte Schätzung: Spiel läuft wenn Kickoff > 0 min und < 120 min her
+                        const kickoffTime = new Date(match.kickoff);
+                        const minutesSinceKickoff = (now - kickoffTime) / 60000;
+                        const likelyInPlay = minutesSinceKickoff >= 0 && minutesSinceKickoff < 120;
+
+                        if (likelyInPlay) {
+                            statusBadge = `<span class="text-red-500 font-black flex items-center gap-1"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> LIVE</span>`;
+                            cardBorder = 'border-l-4 border-l-red-600';
+                        } else {
+                            statusBadge = `<span class="text-amber-500 font-bold flex items-center gap-1 animate-pulse">CALCULATING...</span>`;
+                            cardBorder = 'border-l-4 border-l-amber-600';
+                        }
                     }
 
-                    middleContent = `<div class="text-3xl font-black text-stone-100 tracking-widest">${realHome} <span class="text-stone-600">:</span> ${realAway}</div>`;
+                    // Endergebnis berechnen (nur für beendete Spiele)
+                    if (match.status !== 'IN_PLAY' && match.status !== 'PAUSED') {
+                        const hasET = match.home_score_et !== null && match.away_score_et !== null;
+                        const hasPen = match.home_score_pen !== null && match.away_score_pen !== null;
+
+                        const displayHome = hasET ? (match.home_score + match.home_score_et) : realHome;
+                        const displayAway = hasET ? (match.away_score + match.away_score_et) : realAway;
+
+                        let extraInfo = '';
+                        if (hasPen) {
+                            extraInfo = `
+                                <div class="flex flex-col items-center gap-0.5 mt-1">
+                                    <span class="text-[9px] text-stone-500 font-mono tracking-widest">(90' ${realHome}:${realAway})</span>
+                                    <span class="text-[9px] text-amber-500/80 font-bold tracking-widest">PEN ${match.home_score_pen}:${match.away_score_pen}</span>
+                                </div>`;
+                        } else if (hasET) {
+                            extraInfo = `<div class="mt-1"><span class="text-[9px] text-stone-500 font-mono tracking-widest">(90' ${realHome}:${realAway}) A.E.T.</span></div>`;
+                        }
+
+                        middleContent = `
+                            <div class="flex flex-col items-center">
+                                <div class="text-3xl font-black text-stone-100 tracking-widest">${displayHome} <span class="text-stone-600">:</span> ${displayAway}</div>
+                                ${extraInfo}
+                            </div>`;
+                    }
 
                     if (pred) {
                         let ptsBadge = '';
@@ -1146,33 +1203,34 @@
             });
         }
 
-        // --- LIVE RADAR ---
+        // --- LIVE RADAR --- (alle 5 Minuten)
         setInterval(async () => {
             if (!currentPlayerId || !currentPassphrase) return;
 
-            const [matchesRes, predRes, playerRes, trendsRes] = await Promise.all([
-                supabaseClient.from('matches').select('*').order('kickoff', { ascending: true }),
+            // Nur Score und eigene Punkte pollen — matches/trends nur wenn nötig
+            const [predRes, playerRes] = await Promise.all([
                 supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId),
-                supabaseClient.rpc('login_operative', { p_secret: currentPassphrase }),
-                supabaseClient.from('public_match_trends').select('*')
+                supabaseClient.rpc('login_operative', { p_secret: currentPassphrase })
             ]);
 
             let needsUIRefresh = false;
-
-            if (!matchesRes.error && matchesRes.data) {
-                const hasMatchUpdate = matchesRes.data.some((newM, i) => {
-                    const oldM = currentMatches[i];
-                    return oldM && (oldM.status !== newM.status || oldM.home_score !== newM.home_score || oldM.away_score !== newM.away_score);
-                });
-                if (hasMatchUpdate) { currentMatches = matchesRes.data; needsUIRefresh = true; }
-            }
 
             if (!predRes.error && predRes.data) {
                 const hasPointsUpdate = predRes.data.some(newP => {
                     const oldP = currentPredictions.find(p => p.match_id === newP.match_id);
                     return oldP && oldP.points_earned !== newP.points_earned;
                 });
-                if (hasPointsUpdate) { currentPredictions = predRes.data; needsUIRefresh = true; }
+                if (hasPointsUpdate) {
+                    currentPredictions = predRes.data;
+                    // Wenn Punkte geändert → auch matches und trends neu laden
+                    const [matchesRes, trendsRes] = await Promise.all([
+                        supabaseClient.from('matches').select('*').order('kickoff', { ascending: true }),
+                        supabaseClient.from('public_match_trends').select('*')
+                    ]);
+                    if (!matchesRes.error && matchesRes.data) currentMatches = matchesRes.data;
+                    if (!trendsRes.error) currentTrends = trendsRes.data;
+                    needsUIRefresh = true;
+                }
             }
 
             if (!playerRes.error && playerRes.data && playerRes.data[0]) {
@@ -1187,13 +1245,11 @@
                 }
             }
 
-            if (!trendsRes.error) currentTrends = trendsRes.data;
-
             if (needsUIRefresh) {
                 if (!document.getElementById('view-matches').classList.contains('hidden')) { renderMatches(); }
                 if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { renderCurrentLeaderboardView(); }
             }
-        }, 60000); 
+        }, 300000); // 5 Minuten
 
     </script>
 </body>
