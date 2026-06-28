@@ -1237,7 +1237,7 @@
             const { order, cols } = built;
 
             const maxCount = Math.max(...order.map(s => cols[s].length));
-            const rowH = 84;
+            let rowH = 84; // refined below from measured card heights to pack rows tightly
             const minHeight = 34 + maxCount * rowH;
 
             let columnsHtml = '';
@@ -1334,6 +1334,14 @@
             }, { passive: true });
 
             applyFocus(bracketFocus);
+
+            // Once styles are applied, pack rows as tightly as the tallest card allows
+            // (just a small gap) so collapsing rounds also shortens the column further.
+            requestAnimationFrame(() => {
+                let maxCardH = 0;
+                innerEl.querySelectorAll('.kocard').forEach(c => { if (c.offsetHeight > maxCardH) maxCardH = c.offsetHeight; });
+                if (maxCardH > 0) { rowH = maxCardH + 8; applyFocus(bracketFocus); }
+            });
         }
 
         // --- TAB SWITCHING ---
