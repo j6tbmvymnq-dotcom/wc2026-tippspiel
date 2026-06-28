@@ -15,6 +15,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
+        /* Tab bar: no tap-highlight flash; colour is driven only by switchTab, not by
+           hover/active states (avoids the sticky-:hover colour glitch on mobile). */
+        nav button { -webkit-tap-highlight-color: transparent; }
+
         /* --- KNOCKOUT BRACKET (Turnierbaum) --- */
         :root { --ko-line: rgba(120,113,108,0.45); --ko-line-live: rgba(220,38,38,0.55); }
 
@@ -133,12 +137,12 @@
 
         <nav class="flex border-b border-stone-800 bg-stone-900 overflow-x-auto shadow-inner">
             <button onclick="switchTab('matches')" id="tab-matches" class="min-w-[25%] py-4 text-center font-black text-green-500 border-b-4 border-green-600 text-xs md:text-sm uppercase tracking-wider transition-colors">Matches</button>
-            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors relative">
+            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors relative">
                 <span id="tab-tournament-label">Intel</span>
                 <span id="tab-tournament-new" class="hidden align-middle ml-1 text-[7px] font-black bg-green-600 text-stone-950 px-1 py-0.5 rounded tracking-widest">NEW</span>
             </button>
-            <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Ranks</button>
-            <button onclick="switchTab('info')" id="tab-info" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Rules</button>
+            <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors">Ranks</button>
+            <button onclick="switchTab('info')" id="tab-info" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors">Rules</button>
         </nav>
 
         <main class="p-4 md:p-6 min-h-[50vh]">
