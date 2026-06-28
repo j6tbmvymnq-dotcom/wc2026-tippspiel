@@ -962,14 +962,27 @@
             return stage && stage !== 'GROUP_STAGE' && stage !== 'TBD';
         }
 
-        // The knockout phase is "live" once a KO fixture has a real opponent or has kicked off.
+        // The knockout phase is "live" as soon as ANY of these are true. Several
+        // signals are used on purpose so the bracket still appears even if the
+        // daily updater hasn't synced the resolved KO opponents yet.
         function isKoPhaseActive() {
-            return currentMatches.some(m =>
-                isKoStage(m.stage) &&
-                ((m.home_team && m.home_team.toUpperCase() !== 'TBD') ||
-                 (m.away_team && m.away_team.toUpperCase() !== 'TBD') ||
-                 m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'FINISHED')
-            );
+            const ko = currentMatches.filter(m => isKoStage(m.stage));
+            if (ko.length === 0) return false;
+
+            // 1) A KO fixture already has a determined opponent, or has kicked off / finished.
+            if (ko.some(m =>
+                (m.home_team && m.home_team.toUpperCase() !== 'TBD') ||
+                (m.away_team && m.away_team.toUpperCase() !== 'TBD') ||
+                m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'FINISHED')) return true;
+
+            // 2) The entire group stage has finished.
+            const groups = currentMatches.filter(m => m.stage === 'GROUP_STAGE');
+            if (groups.length > 0 && groups.every(m => m.status === 'FINISHED')) return true;
+
+            // 3) Time-based fallback (immune to a stale updater): we are within 36h
+            //    of the first knockout kickoff.
+            const firstKo = Math.min(...ko.map(m => new Date(m.kickoff).getTime()));
+            return Number.isFinite(firstKo) && Date.now() >= firstKo - 36 * 60 * 60 * 1000;
         }
 
         // Re-label the "Intel" tab to "Bracket" + NEW badge once the KO phase is live.
@@ -1116,36 +1129,126 @@
             }, 350);
         }
 
+        // Build the bracket as ordered columns, linking each match to its real
+        // feeder matches by TEAM IDENTITY — the football-data API provides no
+        // bracket linkage, and kickoff/id order does NOT reflect the bracket. A
+        // next-round match's two teams are exactly the winners of two previous-round
+        // matches, so we locate those by searching for the teams. This reconstructs
+        // the correct tree regardless of input order. Connectors are only drawn
+        // where the linkage is actually known — never guessed.
+        function buildBracketColumns(byStage) {
+            const order = KO_ORDER.filter(s => byStage[s] && byStage[s].length > 0);
+            if (order.length === 0) return null;
+
+            const up = t => t == null ? null : String(t).toUpperCase();
+            const realTeam = t => { const u = up(t); return (u && u !== 'TBD') ? u : null; };
+            const teamsOf = m => m ? [realTeam(m.home_team), realTeam(m.away_team)].filter(Boolean) : [];
+            const byId = (a, b) => a.id - b.id;
+            const findByTeam = (arr, teamU) => teamU
+                ? arr.find(m => up(m.home_team) === teamU || up(m.away_team) === teamU) : null;
+
+            // Deepest round that already has a resolved team — our ordering anchor.
+            let anchor = 0;
+            for (let i = order.length - 1; i >= 1; i--) {
+                if (byStage[order[i]].some(m => teamsOf(m).length)) { anchor = i; break; }
+            }
+
+            // Expand a match down to its base-round (R32) leaves via feeder identity.
+            const leavesUnder = (m, ri) => {
+                if (ri === 0) return [m];
+                const prev = byStage[order[ri - 1]];
+                let fh = null, fa = null;
+                if (m) {
+                    fh = findByTeam(prev, realTeam(m.home_team));
+                    fa = findByTeam(prev, realTeam(m.away_team));
+                }
+                return leavesUnder(fh, ri - 1).concat(leavesUnder(fa, ri - 1));
+            };
+
+            // Base-round order: expand from the anchor round (or id order if nothing resolved yet).
+            const baseCount = byStage[order[0]].length;
+            let base = [];
+            if (anchor === 0) {
+                base = byStage[order[0]].slice().sort(byId);
+            } else {
+                byStage[order[anchor]].slice().sort(byId).forEach(m => {
+                    base = base.concat(leavesUnder(m, anchor));
+                });
+            }
+            const baseAll = byStage[order[0]].slice().sort(byId);
+            const usedBase = new Set(base.filter(Boolean).map(m => m.id));
+            const leftoverBase = baseAll.filter(m => !usedBase.has(m.id));
+            while (base.length < baseCount) base.push(null);
+            let bi = 0;
+            for (let i = 0; i < base.length; i++) {
+                if (base[i] == null && bi < leftoverBase.length) base[i] = leftoverBase[bi++];
+            }
+
+            // Build each subsequent round from the previous one: consecutive pairs of
+            // matches feed the next slot, and we pick the actual match for that slot
+            // by feeder-team identity. Unresolved (all-TBD) rounds fall back to id order.
+            const cols = {};
+            cols[order[0]] = base.slice();
+            for (let ri = 1; ri < order.length; ri++) {
+                const prevCol = cols[order[ri - 1]];
+                const pool = byStage[order[ri]].slice();
+                const used = new Set();
+                const slots = [];
+                for (let k = 0; k * 2 < prevCol.length; k++) {
+                    const feeders = new Set([...teamsOf(prevCol[2 * k]), ...teamsOf(prevCol[2 * k + 1])]);
+                    let p = null;
+                    if (feeders.size) p = pool.find(x => !used.has(x.id) && teamsOf(x).some(t => feeders.has(t)));
+                    if (p) used.add(p.id);
+                    slots.push(p || null);
+                }
+                const leftover = pool.filter(x => !used.has(x.id)).sort(byId);
+                let li = 0;
+                for (let i = 0; i < slots.length; i++) {
+                    if (slots[i] == null && li < leftover.length) slots[i] = leftover[li++];
+                }
+                cols[order[ri]] = slots;
+            }
+
+            return { order, cols, teamsOf };
+        }
+
         function renderBracket() {
             const container = document.getElementById('tournament-bracket');
 
-            // Group KO matches by stage, keep only the main bracket rounds in order.
             const byStage = {};
             currentMatches.filter(m => isKoStage(m.stage)).forEach(m => {
                 (byStage[m.stage] = byStage[m.stage] || []).push(m);
             });
-            Object.values(byStage).forEach(arr => arr.sort((a, b) =>
-                new Date(a.kickoff) - new Date(b.kickoff) || a.id - b.id));
 
-            const rounds = KO_ORDER.filter(stage => byStage[stage] && byStage[stage].length > 0);
-            if (rounds.length === 0) {
+            const built = buildBracketColumns(byStage);
+            if (!built) {
                 container.innerHTML = `<p class="text-center text-stone-600 text-sm font-mono">Bracket will be generated once the knockout stage begins.</p>`;
                 return;
             }
+            const { order, cols, teamsOf } = built;
 
-            const maxCount = Math.max(...rounds.map(s => byStage[s].length));
+            const maxCount = Math.max(...order.map(s => cols[s].length));
             const rowH = 84;
             const minHeight = 34 + maxCount * rowH;
 
+            // A pair's connector is drawn only when its parent match is resolved —
+            // i.e. when we actually know these two matches feed into it.
+            const parentKnown = slot => slot && teamsOf(slot).length > 0;
+
             let columnsHtml = '';
-            rounds.forEach((stage, rIdx) => {
-                const hasPrev = rIdx > 0;
-                const hasNext = rIdx < rounds.length - 1;
-                const matches = byStage[stage];
+            order.forEach((stage, ri) => {
+                const slots = cols[stage];
+                const isLast = ri === order.length - 1;
+                const nextCol = isLast ? null : cols[order[ri + 1]];
 
                 let body = '';
-                matches.forEach(m => {
-                    body += `<div class="komatch ${hasNext ? 'has-next' : ''}">${koCard(m, hasPrev, hasNext)}</div>`;
+                slots.forEach((m, idx) => {
+                    const hasNext = !isLast && nextCol && parentKnown(nextCol[Math.floor(idx / 2)]);
+                    const hasPrev = ri > 0 && parentKnown(m);
+                    const cardHtml = m
+                        ? koCard(m, hasPrev, hasNext)
+                        : `<div class="kocard ${hasPrev ? 'has-prev' : ''} opacity-25 border border-dashed border-stone-800 rounded-lg" style="min-height:46px;"></div>`;
+                    body += `<div class="komatch ${hasNext ? 'has-next' : ''}">${cardHtml}</div>`;
                 });
 
                 columnsHtml += `
