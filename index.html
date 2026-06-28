@@ -18,17 +18,20 @@
         /* --- KNOCKOUT BRACKET (Turnierbaum) --- */
         :root { --ko-line: rgba(120,113,108,0.45); --ko-line-live: rgba(220,38,38,0.55); }
 
+        /* Discrete pager viewport — no free scrolling; vertical page pan only */
         #tournament-bracket .kobracket-scroll {
-            overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
-            scrollbar-width: none; padding-bottom: 4px;
-            /* Snap from round to round (fixed points), not free scrolling */
-            scroll-snap-type: x mandatory;
+            overflow: hidden; position: relative; touch-action: pan-y; padding-bottom: 4px;
         }
-        #tournament-bracket .kobracket-scroll::-webkit-scrollbar { display: none; }
 
-        /* Height collapses to the leftmost visible round as you advance */
-        .kobracket { display: flex; align-items: stretch; min-width: max-content; transition: min-height 0.35s ease; }
-        .koround { display: flex; flex-direction: column; width: 172px; flex: 0 0 auto; scroll-snap-align: start; }
+        /* The track slides one round at a time (translateX); height collapses to the
+           focused round so the view stays compact. Earlier rounds are pushed off the
+           left edge and clipped — i.e. truly hidden. */
+        .kobracket {
+            display: flex; align-items: stretch; min-width: max-content;
+            transition: transform 0.38s cubic-bezier(0.16,1,0.3,1), min-height 0.38s ease;
+            will-change: transform;
+        }
+        .koround { display: flex; flex-direction: column; width: 172px; flex: 0 0 auto; }
         /* The focused (leftmost visible) round hides its dangling incoming line */
         .koround.ko-focus .kocard.has-prev::before { display: none; }
         .koround-head {
@@ -962,6 +965,7 @@
         const KO_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL'];
         const KO_SHORT = { 'LAST_32': 'R32', 'LAST_16': 'R16', 'QUARTER_FINALS': 'QF', 'SEMI_FINALS': 'SF', 'FINAL': 'Final', 'THIRD_PLACE': '3rd Place' };
         let tournamentViewMode = null; // 'bracket' | 'groups'
+        let bracketFocus = 0; // index of the currently focused (leftmost visible) round
 
         function isKoStage(stage) {
             return stage && stage !== 'GROUP_STAGE' && stage !== 'TBD';
@@ -1275,41 +1279,61 @@
             }
 
             container.innerHTML = `
-                <p class="text-[9px] text-stone-600 uppercase tracking-widest text-center mb-3 font-mono flex items-center justify-center gap-2">
+                <p class="text-[9px] text-stone-600 uppercase tracking-widest text-center mb-2 font-mono flex items-center justify-center gap-2">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    Swipe round by round · earlier rounds collapse away
+                    Swipe round by round
                 </p>
+                <div id="kopager-nav" class="flex justify-center gap-1.5 mb-3 flex-wrap"></div>
                 <div class="kobracket-scroll">
                     <div class="kobracket" style="min-height:${minHeight}px;">${columnsHtml}</div>
                 </div>
                 ${thirdHtml}`;
 
-            // --- Snap navigation: as you scroll right, earlier rounds slide off the
-            // left and the bracket height shrinks to the leftmost visible round, so the
-            // current round "moves together" and needs far less vertical scrolling.
+            // --- Discrete pager (like swiping the Apple home screen): each swipe moves
+            // by exactly one round. The track slides via translateX so earlier rounds
+            // are pushed off the left edge and clipped (truly hidden), and the height
+            // collapses to the focused round so the view stays compact. Rounds to the
+            // right stay visible so the bracket always makes sense.
+            const nav = container.querySelector('#kopager-nav');
+            nav.innerHTML = order.map(s =>
+                `<button type="button" class="kopill text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-colors">${KO_SHORT[s]}</button>`
+            ).join('');
+
             const scrollEl = container.querySelector('.kobracket-scroll');
             const innerEl = container.querySelector('.kobracket');
             const roundEls = Array.from(innerEl.querySelectorAll('.koround'));
+            const pills = Array.from(nav.querySelectorAll('.kopill'));
             const counts = order.map(s => cols[s].length);
-            let curFocus = -1;
+            const n = roundEls.length;
+            const roundWidth = roundEls[0] ? roundEls[0].offsetWidth : 172;
+            if (bracketFocus >= n || bracketFocus < 0) bracketFocus = 0;
+
+            const pillBase = 'kopill text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-colors ';
+            const pillActive = pillBase + 'bg-green-900 border-green-700 text-green-300';
+            const pillIdle = pillBase + 'bg-stone-900 border-stone-800 text-stone-500';
+
             const applyFocus = i => {
-                if (i === curFocus) return;
-                curFocus = i;
-                innerEl.style.minHeight = (34 + counts[i] * rowH) + 'px';
-                roundEls.forEach((r, idx) => r.classList.toggle('ko-focus', idx === i));
+                bracketFocus = Math.max(0, Math.min(n - 1, i));
+                innerEl.style.transform = `translateX(${-bracketFocus * roundWidth}px)`;
+                innerEl.style.minHeight = (34 + counts[bracketFocus] * rowH) + 'px';
+                roundEls.forEach((r, idx) => r.classList.toggle('ko-focus', idx === bracketFocus));
+                pills.forEach((pl, idx) => { pl.className = idx === bracketFocus ? pillActive : pillIdle; });
             };
-            let rafPending = false;
-            scrollEl.addEventListener('scroll', () => {
-                if (rafPending) return;
-                rafPending = true;
-                requestAnimationFrame(() => {
-                    rafPending = false;
-                    const w = roundEls[0] ? roundEls[0].offsetWidth : 172;
-                    const i = Math.max(0, Math.min(roundEls.length - 1, Math.round(scrollEl.scrollLeft / w)));
-                    applyFocus(i);
-                });
+
+            pills.forEach((pl, idx) => pl.addEventListener('click', () => applyFocus(idx)));
+
+            // Horizontal swipe advances/retreats one round; vertical stays page scroll.
+            let downX = null, downY = null;
+            scrollEl.addEventListener('touchstart', e => { const t = e.touches[0]; downX = t.clientX; downY = t.clientY; }, { passive: true });
+            scrollEl.addEventListener('touchend', e => {
+                if (downX == null) return;
+                const t = e.changedTouches[0];
+                const dx = t.clientX - downX, dy = t.clientY - downY;
+                downX = null;
+                if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) applyFocus(bracketFocus + (dx < 0 ? 1 : -1));
             }, { passive: true });
-            applyFocus(0);
+
+            applyFocus(bracketFocus);
         }
 
         // --- TAB SWITCHING ---
