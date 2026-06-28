@@ -21,11 +21,16 @@
         #tournament-bracket .kobracket-scroll {
             overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
             scrollbar-width: none; padding-bottom: 4px;
+            /* Snap from round to round (fixed points), not free scrolling */
+            scroll-snap-type: x mandatory;
         }
         #tournament-bracket .kobracket-scroll::-webkit-scrollbar { display: none; }
 
-        .kobracket { display: flex; align-items: stretch; min-width: max-content; }
-        .koround { display: flex; flex-direction: column; width: 172px; flex: 0 0 auto; }
+        /* Height collapses to the leftmost visible round as you advance */
+        .kobracket { display: flex; align-items: stretch; min-width: max-content; transition: min-height 0.35s ease; }
+        .koround { display: flex; flex-direction: column; width: 172px; flex: 0 0 auto; scroll-snap-align: start; }
+        /* The focused (leftmost visible) round hides its dangling incoming line */
+        .koround.ko-focus .kocard.has-prev::before { display: none; }
         .koround-head {
             height: 34px; display: flex; align-items: center; padding-left: 4px;
             position: sticky; top: 0; z-index: 5;
@@ -1272,12 +1277,39 @@
             container.innerHTML = `
                 <p class="text-[9px] text-stone-600 uppercase tracking-widest text-center mb-3 font-mono flex items-center justify-center gap-2">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    Swipe to explore the rounds
+                    Swipe round by round · earlier rounds collapse away
                 </p>
                 <div class="kobracket-scroll">
                     <div class="kobracket" style="min-height:${minHeight}px;">${columnsHtml}</div>
                 </div>
                 ${thirdHtml}`;
+
+            // --- Snap navigation: as you scroll right, earlier rounds slide off the
+            // left and the bracket height shrinks to the leftmost visible round, so the
+            // current round "moves together" and needs far less vertical scrolling.
+            const scrollEl = container.querySelector('.kobracket-scroll');
+            const innerEl = container.querySelector('.kobracket');
+            const roundEls = Array.from(innerEl.querySelectorAll('.koround'));
+            const counts = order.map(s => cols[s].length);
+            let curFocus = -1;
+            const applyFocus = i => {
+                if (i === curFocus) return;
+                curFocus = i;
+                innerEl.style.minHeight = (34 + counts[i] * rowH) + 'px';
+                roundEls.forEach((r, idx) => r.classList.toggle('ko-focus', idx === i));
+            };
+            let rafPending = false;
+            scrollEl.addEventListener('scroll', () => {
+                if (rafPending) return;
+                rafPending = true;
+                requestAnimationFrame(() => {
+                    rafPending = false;
+                    const w = roundEls[0] ? roundEls[0].offsetWidth : 172;
+                    const i = Math.max(0, Math.min(roundEls.length - 1, Math.round(scrollEl.scrollLeft / w)));
+                    applyFocus(i);
+                });
+            }, { passive: true });
+            applyFocus(0);
         }
 
         // --- TAB SWITCHING ---
