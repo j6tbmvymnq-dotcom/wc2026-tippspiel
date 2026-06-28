@@ -962,14 +962,27 @@
             return stage && stage !== 'GROUP_STAGE' && stage !== 'TBD';
         }
 
-        // The knockout phase is "live" once a KO fixture has a real opponent or has kicked off.
+        // The knockout phase is "live" as soon as ANY of these are true. Several
+        // signals are used on purpose so the bracket still appears even if the
+        // daily updater hasn't synced the resolved KO opponents yet.
         function isKoPhaseActive() {
-            return currentMatches.some(m =>
-                isKoStage(m.stage) &&
-                ((m.home_team && m.home_team.toUpperCase() !== 'TBD') ||
-                 (m.away_team && m.away_team.toUpperCase() !== 'TBD') ||
-                 m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'FINISHED')
-            );
+            const ko = currentMatches.filter(m => isKoStage(m.stage));
+            if (ko.length === 0) return false;
+
+            // 1) A KO fixture already has a determined opponent, or has kicked off / finished.
+            if (ko.some(m =>
+                (m.home_team && m.home_team.toUpperCase() !== 'TBD') ||
+                (m.away_team && m.away_team.toUpperCase() !== 'TBD') ||
+                m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'FINISHED')) return true;
+
+            // 2) The entire group stage has finished.
+            const groups = currentMatches.filter(m => m.stage === 'GROUP_STAGE');
+            if (groups.length > 0 && groups.every(m => m.status === 'FINISHED')) return true;
+
+            // 3) Time-based fallback (immune to a stale updater): we are within 36h
+            //    of the first knockout kickoff.
+            const firstKo = Math.min(...ko.map(m => new Date(m.kickoff).getTime()));
+            return Number.isFinite(firstKo) && Date.now() >= firstKo - 36 * 60 * 60 * 1000;
         }
 
         // Re-label the "Intel" tab to "Bracket" + NEW badge once the KO phase is live.
