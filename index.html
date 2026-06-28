@@ -13,6 +13,45 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* --- KNOCKOUT BRACKET (Turnierbaum) --- */
+        :root { --ko-line: rgba(120,113,108,0.45); --ko-line-live: rgba(220,38,38,0.55); }
+
+        #tournament-bracket .kobracket-scroll {
+            overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; padding-bottom: 4px;
+        }
+        #tournament-bracket .kobracket-scroll::-webkit-scrollbar { display: none; }
+
+        .kobracket { display: flex; align-items: stretch; min-width: max-content; }
+        .koround { display: flex; flex-direction: column; width: 172px; flex: 0 0 auto; }
+        .koround-head {
+            height: 34px; display: flex; align-items: center; padding-left: 4px;
+            position: sticky; top: 0; z-index: 5;
+        }
+        .koround-body { flex: 1 1 auto; display: flex; flex-direction: column; }
+        .komatch { flex: 1 1 0; position: relative; display: flex; align-items: center; }
+        .kocard { width: 148px; box-sizing: border-box; position: relative; }
+
+        /* outgoing horizontal stub: card center -> vertical connector */
+        .komatch.has-next::after {
+            content: ''; position: absolute; left: 148px; width: 12px; top: 50%;
+            border-top: 2px solid var(--ko-line);
+        }
+        /* vertical connector joining a pair, sitting in the mid-gutter */
+        .komatch.has-next::before {
+            content: ''; position: absolute; left: 160px; width: 0;
+            border-left: 2px solid var(--ko-line);
+        }
+        .komatch.has-next:nth-child(odd)::before { top: 50%; bottom: 0; }
+        .komatch.has-next:nth-child(even)::before { top: 0; height: 50%; }
+        /* incoming horizontal stub: vertical connector -> next round card */
+        .kocard.has-prev::before {
+            content: ''; position: absolute; left: -12px; width: 12px; top: 50%;
+            border-top: 2px solid var(--ko-line);
+        }
+    </style>
 </head>
 <body class="bg-stone-950 text-stone-300 font-sans antialiased selection:bg-green-900 selection:text-white">
 
@@ -84,7 +123,10 @@
 
         <nav class="flex border-b border-stone-800 bg-stone-900 overflow-x-auto shadow-inner">
             <button onclick="switchTab('matches')" id="tab-matches" class="min-w-[25%] py-4 text-center font-black text-green-500 border-b-4 border-green-600 text-xs md:text-sm uppercase tracking-wider transition-colors">Matches</button>
-            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Intel</button>
+            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors relative">
+                <span id="tab-tournament-label">Intel</span>
+                <span id="tab-tournament-new" class="hidden align-middle ml-1 text-[7px] font-black bg-green-600 text-stone-950 px-1 py-0.5 rounded tracking-widest">NEW</span>
+            </button>
             <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Ranks</button>
             <button onclick="switchTab('info')" id="tab-info" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent hover:text-stone-300 text-xs md:text-sm uppercase tracking-wider transition-colors">Rules</button>
         </nav>
@@ -96,6 +138,16 @@
             </div>
 
             <div id="view-tournament" class="hidden space-y-6">
+                <!-- Toggle (only visible once the knockout phase is live) -->
+                <div id="tournament-toggle" class="hidden flex justify-center bg-stone-900 border border-stone-800 rounded-lg p-1 max-w-xs mx-auto shadow-inner">
+                    <button id="btn-view-bracket" onclick="setTournamentView('bracket')" class="w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider">Bracket</button>
+                    <button id="btn-view-groups" onclick="setTournamentView('groups')" class="w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider">Groups</button>
+                </div>
+
+                <div id="tournament-bracket" class="hidden">
+                    <p class="text-center text-stone-600 text-sm font-mono">Bracket will be generated once the knockout stage begins.</p>
+                </div>
+
                 <div id="tournament-groups" class="space-y-6">
                     <p class="text-center text-stone-600 text-sm font-mono">Standings will be generated here upon deployment.</p>
                 </div>
@@ -450,6 +502,7 @@
             currentMatches = matches || [];
             currentPredictions = predictions || [];
             renderMatches();
+            updateIntelTab();
             scrollToCurrentAction();
         }
 
@@ -900,6 +953,233 @@
             });
         }
 
+        // --- KNOCKOUT BRACKET (Turnierbaum) ---
+        const KO_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL'];
+        const KO_SHORT = { 'LAST_32': 'R32', 'LAST_16': 'R16', 'QUARTER_FINALS': 'QF', 'SEMI_FINALS': 'SF', 'FINAL': 'Final', 'THIRD_PLACE': '3rd Place' };
+        let tournamentViewMode = null; // 'bracket' | 'groups'
+
+        function isKoStage(stage) {
+            return stage && stage !== 'GROUP_STAGE' && stage !== 'TBD';
+        }
+
+        // The knockout phase is "live" once a KO fixture has a real opponent or has kicked off.
+        function isKoPhaseActive() {
+            return currentMatches.some(m =>
+                isKoStage(m.stage) &&
+                ((m.home_team && m.home_team.toUpperCase() !== 'TBD') ||
+                 (m.away_team && m.away_team.toUpperCase() !== 'TBD') ||
+                 m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'FINISHED')
+            );
+        }
+
+        // Re-label the "Intel" tab to "Bracket" + NEW badge once the KO phase is live.
+        function updateIntelTab() {
+            const label = document.getElementById('tab-tournament-label');
+            const badge = document.getElementById('tab-tournament-new');
+            if (!label || !badge) return;
+            if (isKoPhaseActive()) {
+                label.textContent = 'Bracket';
+                badge.classList.remove('hidden');
+            } else {
+                label.textContent = 'Intel';
+                badge.classList.add('hidden');
+            }
+        }
+
+        function setTournamentView(mode) {
+            tournamentViewMode = mode;
+            renderTournamentView();
+        }
+
+        function renderTournamentView() {
+            const koActive = isKoPhaseActive();
+            const toggle = document.getElementById('tournament-toggle');
+            const bracketEl = document.getElementById('tournament-bracket');
+            const groupsEl = document.getElementById('tournament-groups');
+
+            // Default mode: bracket while KO runs, otherwise the classic group tables.
+            if (tournamentViewMode === null) tournamentViewMode = koActive ? 'bracket' : 'groups';
+            if (!koActive) tournamentViewMode = 'groups';
+
+            if (koActive) {
+                toggle.classList.remove('hidden');
+                setTournamentToggleClasses();
+            } else {
+                toggle.classList.add('hidden');
+            }
+
+            if (tournamentViewMode === 'bracket') {
+                bracketEl.classList.remove('hidden');
+                groupsEl.classList.add('hidden');
+                renderBracket();
+            } else {
+                bracketEl.classList.add('hidden');
+                groupsEl.classList.remove('hidden');
+                fetchTournamentGroups();
+            }
+        }
+
+        function setTournamentToggleClasses() {
+            const bBtn = document.getElementById('btn-view-bracket');
+            const gBtn = document.getElementById('btn-view-groups');
+            const active = "w-1/2 py-2 rounded-md bg-stone-800 text-green-500 font-bold shadow-sm transition-all text-xs uppercase tracking-wider";
+            const idle = "w-1/2 py-2 rounded-md text-stone-500 font-bold hover:text-stone-300 transition-all text-xs uppercase tracking-wider";
+            bBtn.className = tournamentViewMode === 'bracket' ? active : idle;
+            gBtn.className = tournamentViewMode === 'groups' ? active : idle;
+        }
+
+        function koResult(m) {
+            const hasET = m.home_score_et != null && m.away_score_et != null;
+            const hasPen = m.home_score_pen != null && m.away_score_pen != null;
+            const hAgg = m.home_score == null ? null : (hasET ? m.home_score + m.home_score_et : m.home_score);
+            const aAgg = m.away_score == null ? null : (hasET ? m.away_score + m.away_score_et : m.away_score);
+            let winner = null;
+            if (hasPen) {
+                winner = m.home_score_pen > m.away_score_pen ? 'H' : (m.away_score_pen > m.home_score_pen ? 'A' : null);
+            } else if (hAgg != null && aAgg != null) {
+                winner = hAgg > aAgg ? 'H' : (aAgg > hAgg ? 'A' : null);
+            }
+            return { hAgg, aAgg, hasET, hasPen, winner, penStr: hasPen ? `${m.home_score_pen}:${m.away_score_pen}` : null };
+        }
+
+        const KO_SHIELD = `<svg width="16" height="16" class="text-stone-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 4.4-3 8.5-8 11-5-2.5-8-6.6-8-11V5l8-3z"/></svg>`;
+
+        function koTeamRow(name, logo, scoreDisplay, isWinner, isTBD) {
+            const flag = (isTBD || !logo)
+                ? KO_SHIELD
+                : `<img src="${logo}" alt="" class="w-4 h-4 object-contain rounded-sm flex-shrink-0">`;
+            const nm = isTBD ? 'TBD' : esc(name);
+            return `
+                <div class="flex items-center gap-1.5 ${isWinner ? 'text-stone-100' : 'text-stone-400'}">
+                    ${flag}
+                    <span class="text-[11px] ${isWinner ? 'font-black' : 'font-bold'} truncate flex-1">${nm}</span>
+                    <span class="text-[11px] font-black w-3 text-right ${isWinner ? 'text-green-500' : 'text-stone-500'}">${scoreDisplay}</span>
+                </div>`;
+        }
+
+        function koCard(m, hasPrev, hasNext) {
+            const isTBDh = !m.home_team || m.home_team.toUpperCase() === 'TBD';
+            const isTBDa = !m.away_team || m.away_team.toUpperCase() === 'TBD';
+            const finished = m.status === 'FINISHED';
+            const live = m.status === 'IN_PLAY' || m.status === 'PAUSED';
+            const r = koResult(m);
+
+            let hScore = '', aScore = '';
+            if (finished || live) {
+                hScore = r.hAgg != null ? r.hAgg : '';
+                aScore = r.aAgg != null ? r.aAgg : '';
+            }
+
+            const kickoff = new Date(m.kickoff);
+            const dateStr = kickoff.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Europe/Vilnius' });
+            const timeStr = kickoff.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Vilnius' });
+
+            let badge;
+            let borderClass = 'border-stone-800';
+            if (live) {
+                badge = `<span class="text-red-500 font-black flex items-center gap-1"><span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>LIVE</span>`;
+                borderClass = 'border-red-900/60';
+            } else if (finished) {
+                badge = `<span class="text-green-600 font-black">FT</span>`;
+                borderClass = 'border-stone-700';
+            } else {
+                badge = `<span class="text-stone-500 font-bold">${timeStr}</span>`;
+            }
+
+            const penFooter = r.penStr
+                ? `<div class="text-[8px] text-amber-500/80 font-bold tracking-widest text-right mt-1 pr-0.5">PEN ${r.penStr}</div>`
+                : '';
+
+            return `
+                <div onclick="goToKoMatch('${m.stage}', ${m.id})"
+                    class="kocard cursor-pointer bg-stone-900 border ${borderClass} rounded-lg px-2.5 py-2 shadow-md hover:border-green-800 transition-colors ${hasPrev ? 'has-prev' : ''}">
+                    <div class="flex justify-between items-center text-[8px] uppercase tracking-widest mb-1.5 text-stone-500">
+                        <span>${dateStr}</span>
+                        ${badge}
+                    </div>
+                    <div class="space-y-1">
+                        ${koTeamRow(m.home_team, m.home_logo, hScore, r.winner === 'H', isTBDh)}
+                        ${koTeamRow(m.away_team, m.away_logo, aScore, r.winner === 'A', isTBDa)}
+                    </div>
+                    ${penFooter}
+                </div>`;
+        }
+
+        function goToKoMatch(stage, id) {
+            matchFilterMode = 'ko';
+            activeStage = stage;
+            switchTab('matches');
+            renderMatches();
+            setTimeout(() => {
+                const el = document.getElementById('match-' + id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 350);
+        }
+
+        function renderBracket() {
+            const container = document.getElementById('tournament-bracket');
+
+            // Group KO matches by stage, keep only the main bracket rounds in order.
+            const byStage = {};
+            currentMatches.filter(m => isKoStage(m.stage)).forEach(m => {
+                (byStage[m.stage] = byStage[m.stage] || []).push(m);
+            });
+            Object.values(byStage).forEach(arr => arr.sort((a, b) =>
+                new Date(a.kickoff) - new Date(b.kickoff) || a.id - b.id));
+
+            const rounds = KO_ORDER.filter(stage => byStage[stage] && byStage[stage].length > 0);
+            if (rounds.length === 0) {
+                container.innerHTML = `<p class="text-center text-stone-600 text-sm font-mono">Bracket will be generated once the knockout stage begins.</p>`;
+                return;
+            }
+
+            const maxCount = Math.max(...rounds.map(s => byStage[s].length));
+            const rowH = 84;
+            const minHeight = 34 + maxCount * rowH;
+
+            let columnsHtml = '';
+            rounds.forEach((stage, rIdx) => {
+                const hasPrev = rIdx > 0;
+                const hasNext = rIdx < rounds.length - 1;
+                const matches = byStage[stage];
+
+                let body = '';
+                matches.forEach(m => {
+                    body += `<div class="komatch ${hasNext ? 'has-next' : ''}">${koCard(m, hasPrev, hasNext)}</div>`;
+                });
+
+                columnsHtml += `
+                    <div class="koround">
+                        <div class="koround-head">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-green-500/80">${KO_SHORT[stage]}</span>
+                        </div>
+                        <div class="koround-body">${body}</div>
+                    </div>`;
+            });
+
+            // Optional 3rd place match, shown beneath the tree.
+            let thirdHtml = '';
+            const third = currentMatches.filter(m => m.stage === 'THIRD_PLACE')
+                .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))[0];
+            if (third) {
+                thirdHtml = `
+                    <div class="mt-6 pt-4 border-t border-stone-800">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-amber-600/80 mb-2 text-center">Match for 3rd Place</p>
+                        <div class="max-w-[180px] mx-auto">${koCard(third, false, false)}</div>
+                    </div>`;
+            }
+
+            container.innerHTML = `
+                <p class="text-[9px] text-stone-600 uppercase tracking-widest text-center mb-3 font-mono flex items-center justify-center gap-2">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    Swipe to explore the rounds
+                </p>
+                <div class="kobracket-scroll">
+                    <div class="kobracket" style="min-height:${minHeight}px;">${columnsHtml}</div>
+                </div>
+                ${thirdHtml}`;
+        }
+
         // --- TAB SWITCHING ---
         function switchTab(t) {
             ['matches','tournament','leaderboard','info'].forEach(id => {
@@ -910,8 +1190,8 @@
             document.getElementById(`view-${t}`).classList.remove('hidden');
             document.getElementById(`tab-${t}`).classList.remove('text-stone-500', 'border-transparent');
             document.getElementById(`tab-${t}`).classList.add('text-green-500', 'border-green-600');
-            if (t === 'leaderboard') fetchLeaderboard(); 
-            if (t === 'tournament') fetchTournamentGroups();
+            if (t === 'leaderboard') fetchLeaderboard();
+            if (t === 'tournament') renderTournamentView();
             if (t === 'matches') scrollToCurrentAction();
         }
 
@@ -1266,6 +1546,8 @@
             if (needsUIRefresh) {
                 if (!document.getElementById('view-matches').classList.contains('hidden')) { renderMatches(); }
                 if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { renderCurrentLeaderboardView(); }
+                updateIntelTab();
+                if (!document.getElementById('view-tournament').classList.contains('hidden')) { renderTournamentView(); }
             }
         }, 300000); // 5 Minuten
 
