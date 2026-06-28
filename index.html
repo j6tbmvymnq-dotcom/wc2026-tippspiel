@@ -208,6 +208,7 @@
                         <li><strong>Match Deadlines:</strong> All predictions must be submitted before the official kickoff. Late entries will be rejected by the system automatically.</li>
                         <li><strong>Bonus Deadlines:</strong> Bonus parameters must be locked in before the official start of the WorldCup or will be also rejected.</li>
                         <li><strong>Regular Time Only:</strong> Predictions apply exclusively to regular playing time (90m + stoppage). Extra time and penalties are ignored.</li>
+                        <li><strong>Tie-Breaker:</strong> If players are level on points, the higher number of <strong>exact-score predictions</strong> ranks first; if still equal, the higher number of <strong>correct bonus questions</strong>.</li>
                     </ul>
                 </div>
                 <div class="bg-stone-900 border border-stone-800 rounded-xl p-6 shadow-md">
@@ -1444,8 +1445,19 @@
         let currentLeaderboardMode = 'top50'; 
 
         async function fetchLeaderboard() {
-            const { data } = await supabaseClient.from('public_leaderboard').select('id, nickname, score').order('score', { ascending: false }).limit(2000); 
-            if(data) { allPlayersCached = data; updatePersonalRankDisplay(); renderCurrentLeaderboardView(); }
+            const { data } = await supabaseClient.from('public_leaderboard').select('*').order('score', { ascending: false }).limit(2000);
+            if (data) {
+                // Tie-break: equal score -> more exact-score predictions -> more correct
+                // bonus answers. Falls back to score-only if the view doesn't expose the
+                // tie-break columns yet (exact_hits / bonus_hits), so deploy order is safe.
+                allPlayersCached = data.sort((a, b) =>
+                    (b.score - a.score) ||
+                    ((b.exact_hits || 0) - (a.exact_hits || 0)) ||
+                    ((b.bonus_hits || 0) - (a.bonus_hits || 0))
+                );
+                updatePersonalRankDisplay();
+                renderCurrentLeaderboardView();
+            }
         }
 
         function updatePersonalRankDisplay() {
