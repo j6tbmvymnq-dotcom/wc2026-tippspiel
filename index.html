@@ -1225,26 +1225,23 @@
                 container.innerHTML = `<p class="text-center text-stone-600 text-sm font-mono">Bracket will be generated once the knockout stage begins.</p>`;
                 return;
             }
-            const { order, cols, teamsOf } = built;
+            const { order, cols } = built;
 
             const maxCount = Math.max(...order.map(s => cols[s].length));
             const rowH = 84;
             const minHeight = 34 + maxCount * rowH;
 
-            // A pair's connector is drawn only when its parent match is resolved —
-            // i.e. when we actually know these two matches feed into it.
-            const parentKnown = slot => slot && teamsOf(slot).length > 0;
-
             let columnsHtml = '';
             order.forEach((stage, ri) => {
                 const slots = cols[stage];
                 const isLast = ri === order.length - 1;
-                const nextCol = isLast ? null : cols[order[ri + 1]];
 
                 let body = '';
                 slots.forEach((m, idx) => {
-                    const hasNext = !isLast && nextCol && parentKnown(nextCol[Math.floor(idx / 2)]);
-                    const hasPrev = ri > 0 && parentKnown(m);
+                    // Draw the full bracket skeleton permanently: every match in a
+                    // non-final round feeds forward, every match past R32 has feeders.
+                    const hasNext = !isLast;
+                    const hasPrev = ri > 0;
                     const cardHtml = m
                         ? koCard(m, hasPrev, hasNext)
                         : `<div class="kocard ${hasPrev ? 'has-prev' : ''} opacity-25 border border-dashed border-stone-800 rounded-lg" style="min-height:46px;"></div>`;
