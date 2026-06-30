@@ -136,13 +136,16 @@
         </header>
 
         <nav class="flex border-b border-stone-800 bg-stone-900 overflow-x-auto shadow-inner">
-            <button onclick="switchTab('matches')" id="tab-matches" class="min-w-[25%] py-4 text-center font-black text-green-500 border-b-4 border-green-600 text-xs md:text-sm uppercase tracking-wider transition-colors">Matches</button>
-            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors relative">
+            <button onclick="switchTab('matches')" id="tab-matches" class="min-w-[20%] py-4 text-center font-black text-green-500 border-b-4 border-green-600 text-xs md:text-sm uppercase tracking-wider transition-colors">Matches</button>
+            <button onclick="switchTab('tournament')" id="tab-tournament" class="min-w-[20%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors relative">
                 <span id="tab-tournament-label">Intel</span>
-                <span id="tab-tournament-new" class="hidden align-middle ml-1 text-[7px] font-black bg-green-600 text-stone-950 px-1 py-0.5 rounded tracking-widest">NEW</span>
             </button>
-            <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors">Ranks</button>
-            <button onclick="switchTab('info')" id="tab-info" class="min-w-[25%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors">Rules</button>
+            <button onclick="switchTab('bonus')" id="tab-bonus" class="min-w-[20%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors relative">
+                Bonus
+                <span id="tab-bonus-new" class="absolute top-2 right-1 text-[6px] font-black bg-green-600 text-stone-950 px-1 py-0.5 rounded tracking-widest leading-none">NEW</span>
+            </button>
+            <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="min-w-[20%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors">Ranks</button>
+            <button onclick="switchTab('info')" id="tab-info" class="min-w-[20%] py-4 text-center font-bold text-stone-500 border-b-4 border-transparent text-xs md:text-sm uppercase tracking-wider transition-colors">Rules</button>
         </nav>
 
         <main class="p-4 md:p-6 min-h-[50vh]">
@@ -165,6 +168,23 @@
                 <div id="tournament-groups" class="space-y-6">
                     <p class="text-center text-stone-600 text-sm font-mono">Standings will be generated here upon deployment.</p>
                 </div>
+            </div>
+
+            <div id="view-bonus" class="hidden space-y-4">
+                <div class="bg-stone-900 text-stone-200 rounded-xl p-5 shadow-md flex justify-between items-center border border-stone-800">
+                    <div>
+                        <p class="text-stone-500 text-[10px] uppercase tracking-widest font-bold mb-1">Bonus Points</p>
+                        <p class="text-4xl font-black text-green-500" id="bonus-total-display">0</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-stone-500 text-[10px] uppercase tracking-widest font-bold mb-1">Correct</p>
+                        <p class="text-4xl font-black text-stone-100" id="bonus-correct-display">0/6</p>
+                    </div>
+                </div>
+                <div id="bonus-list" class="space-y-3">
+                    <p class="text-center text-stone-600 text-sm font-mono">Loading your bonus predictions...</p>
+                </div>
+                <p class="text-[9px] text-stone-700 uppercase tracking-widest text-center font-mono pt-1">Your locked bonus answers · scored after each stage</p>
             </div>
 
             <div id="view-leaderboard" class="hidden">
@@ -1001,18 +1021,12 @@
             return Number.isFinite(firstKo) && Date.now() >= firstKo - 36 * 60 * 60 * 1000;
         }
 
-        // Re-label the "Intel" tab to "Bracket" + NEW badge once the KO phase is live.
+        // Re-label the "Intel" tab to "Bracket" once the KO phase is live.
+        // (The NEW badge now lives on the Bonus tab.)
         function updateIntelTab() {
             const label = document.getElementById('tab-tournament-label');
-            const badge = document.getElementById('tab-tournament-new');
-            if (!label || !badge) return;
-            if (isKoPhaseActive()) {
-                label.textContent = 'Bracket';
-                badge.classList.remove('hidden');
-            } else {
-                label.textContent = 'Intel';
-                badge.classList.add('hidden');
-            }
+            if (!label) return;
+            label.textContent = isKoPhaseActive() ? 'Bracket' : 'Intel';
         }
 
         function setTournamentView(mode) {
@@ -1360,7 +1374,7 @@
 
         // --- TAB SWITCHING ---
         function switchTab(t) {
-            ['matches','tournament','leaderboard','info'].forEach(id => {
+            ['matches','tournament','bonus','leaderboard','info'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.add('hidden');
                 document.getElementById(`tab-${id}`).classList.remove('text-green-500', 'border-green-600');
                 document.getElementById(`tab-${id}`).classList.add('text-stone-500', 'border-transparent');
@@ -1370,6 +1384,7 @@
             document.getElementById(`tab-${t}`).classList.add('text-green-500', 'border-green-600');
             if (t === 'leaderboard') fetchLeaderboard();
             if (t === 'tournament') renderTournamentView();
+            if (t === 'bonus') renderBonusView();
             if (t === 'matches') scrollToCurrentAction();
         }
 
@@ -1442,6 +1457,79 @@
 
         function closeScoreBreakdown() {
             document.getElementById('score-breakdown-modal').classList.add('hidden');
+        }
+
+        // --- BONUS PREDICTIONS VIEW ("Bonus" tab) ---
+        const BONUS_POINTS = { bq1: 10, bq2: 2, bq3: 2, bq4: 2, bq5: 5, bq6: 5 };
+
+        // A bonus question is "resolved" once the stage it depends on is finished.
+        function bqResolved(qId) {
+            const grp = currentMatches.filter(m => m.stage === 'GROUP_STAGE');
+            const r32 = currentMatches.filter(m => m.stage === 'LAST_32');
+            const finalM = currentMatches.find(m => m.stage === 'FINAL');
+            const groupsDone = grp.length > 0 && grp.every(m => m.status === 'FINISHED');
+            const r32Done = r32.length > 0 && r32.every(m => m.status === 'FINISHED');
+            const tourneyDone = !!finalM && finalM.status === 'FINISHED';
+            if (qId === 'bq2' || qId === 'bq4') return groupsDone;
+            if (qId === 'bq6') return r32Done;
+            if (qId === 'bq1' || qId === 'bq3' || qId === 'bq5') return tourneyDone;
+            return false;
+        }
+
+        function renderBonusView() {
+            const list = document.getElementById('bonus-list');
+            if (!list) return;
+
+            let totalPoints = 0, correctCount = 0;
+            let html = '';
+
+            BONUS_QUESTIONS.forEach(q => {
+                const pred = currentBonusPredictions.find(p => p.question_id === q.id);
+                const answer = pred ? pred.answer : null;
+                const points = pred ? (pred.points_earned || 0) : 0;
+                const resolved = bqResolved(q.id);
+                const maxPts = BONUS_POINTS[q.id] || 0;
+
+                const parts = q.text.split(':');
+                const shortLbl = parts[0].trim();
+                const question = (parts[1] || '').trim();
+
+                if (points > 0) { totalPoints += points; correctCount += 1; }
+
+                let badge, accent;
+                if (!answer) {
+                    badge = `<span class="inline-block bg-stone-800 text-stone-500 border border-stone-700 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest whitespace-nowrap">No pick</span>`;
+                    accent = 'border-l-stone-800';
+                } else if (!resolved) {
+                    badge = `<span class="inline-flex items-center gap-1 bg-amber-950/30 text-amber-500/90 border border-amber-900/40 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/80 animate-pulse"></span>Pending</span>`;
+                    accent = 'border-l-stone-700';
+                } else if (points > 0) {
+                    badge = `<span class="inline-flex items-center gap-1 bg-green-900/40 text-green-400 border border-green-800 text-[11px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest whitespace-nowrap"><svg width="12" height="12" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>+${points} pts</span>`;
+                    accent = 'border-l-green-600';
+                } else {
+                    badge = `<span class="inline-block bg-stone-800 text-stone-500 border border-stone-700 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest whitespace-nowrap">0 pts</span>`;
+                    accent = 'border-l-red-900/50';
+                }
+
+                html += `
+                    <div class="bg-stone-900 border border-stone-800 border-l-4 ${accent} rounded-xl p-4 shadow-md">
+                        <div class="flex justify-between items-start gap-3">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-green-500/70 mb-1">${shortLbl} · ${maxPts} pts</p>
+                                <p class="text-xs text-stone-400 leading-snug mb-2.5">${esc(question)}</p>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[9px] text-stone-500 uppercase tracking-widest font-bold">Your pick</span>
+                                    <span class="text-sm font-black ${answer ? 'text-stone-100' : 'text-stone-600'} truncate">${answer ? esc(answer) : '—'}</span>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">${badge}</div>
+                        </div>
+                    </div>`;
+            });
+
+            list.innerHTML = html;
+            document.getElementById('bonus-total-display').textContent = totalPoints;
+            document.getElementById('bonus-correct-display').textContent = `${correctCount}/${BONUS_QUESTIONS.length}`;
         }
 
         // --- LEADERBOARD ---
@@ -1725,8 +1813,11 @@
                 const scoreChanged = document.getElementById('user-score').innerText !== newPlayerData.score.toString();
                 if (scoreChanged) {
                     document.getElementById('user-score').innerText = newPlayerData.score;
+                    // Bonus-Tipps auffrischen, falls gerade Bonuspunkte vergeben wurden.
+                    const { data: freshBonus } = await supabaseClient.from('bonus_predictions').select('*').eq('player_id', currentPlayerId);
+                    if (freshBonus) currentBonusPredictions = freshBonus;
                     if (!document.getElementById('view-leaderboard').classList.contains('hidden')) {
-                        await fetchLeaderboard(); 
+                        await fetchLeaderboard();
                     }
                     needsUIRefresh = true;
                 }
@@ -1737,6 +1828,7 @@
                 if (!document.getElementById('view-leaderboard').classList.contains('hidden')) { renderCurrentLeaderboardView(); }
                 updateIntelTab();
                 if (!document.getElementById('view-tournament').classList.contains('hidden')) { renderTournamentView(); }
+                if (!document.getElementById('view-bonus').classList.contains('hidden')) { renderBonusView(); }
             }
         }, 300000); // 5 Minuten
 
