@@ -21,19 +21,22 @@ const API_HEADERS = {
 };
 
 // --- HELPER: BONUS PUNKTE VERTEILEN ---
-async function distributeBonusPoints(qId: string, correctAnswer: string, pointsToAward: number) {
+// Markiert korrekte Bonus-Tipps als ausgewertet und gibt die Anzahl zurück. Die Punkte
+// werden NICHT mehr direkt auf players.score addiert — der Score wird am Ende aus den
+// Tabellen neu berechnet (recompute_player_scores), das ist absturzsicher und idempotent.
+async function distributeBonusPoints(qId: string, correctAnswer: string, pointsToAward: number): Promise<number> {
     const { data: correctPredictions, error } = await supabase
         .from('bonus_predictions')
-        .select('*')
+        .select('id')
         .eq('question_id', qId)
         .eq('answer', correctAnswer)
         .eq('evaluated', false);
 
     if (error) {
         console.error(`Fehler BQ ${qId}:`, error);
-        return;
+        return 0;
     }
-    if (!correctPredictions || correctPredictions.length === 0) return;
+    if (!correctPredictions || correctPredictions.length === 0) return 0;
 
     console.log(`[BONUS] ${pointsToAward} Punkte für ${qId} (${correctAnswer}) an ${correctPredictions.length} Spieler.`);
 
@@ -42,23 +45,8 @@ async function distributeBonusPoints(qId: string, correctAnswer: string, pointsT
             .from('bonus_predictions')
             .update({ points_earned: pointsToAward, evaluated: true })
             .eq('id', pred.id);
-
-        const { data: player } = await supabase
-            .from('players')
-            .select('score')
-            .eq('id', pred.player_id)
-            .single();
-
-        if (!player) {
-            console.error(`Spieler ${pred.player_id} nicht gefunden, überspringe.`);
-            continue;
-        }
-
-        await supabase
-            .from('players')
-            .update({ score: player.score + pointsToAward })
-            .eq('id', pred.player_id);
     }
+    return correctPredictions.length;
 }
 
 // --- HELPER: 90-Minuten-Ergebnis eines Spiels (regularTime, sonst fullTime) ---
@@ -73,6 +61,10 @@ function score90(m: any): { home: number | null; away: number | null } {
 // --- MAIN UPDATE JOB ---
 async function runUpdate() {
     console.log("Starte WM-Update-Job...");
+
+    // Wird true, sobald in diesem Lauf neue Punkte vergeben wurden (Spiel oder Bonus).
+    // Nur dann werden am Ende die Scores neu berechnet — spart Ressourcen im Leerlauf.
+    let scoresChanged = false;
 
     // ==========================================
     // TEIL 1: SPIELE AKTUALISIEREN & PUNKTE BERECHNEN
@@ -177,23 +169,8 @@ async function runUpdate() {
                     .update({ points_earned: points, evaluated: true })
                     .eq('id', pred.id);
 
-                if (points > 0) {
-                    const { data: player } = await supabase
-                        .from('players')
-                        .select('score')
-                        .eq('id', pred.player_id)
-                        .single();
-
-                    if (!player) {
-                        console.error(`Spieler ${pred.player_id} nicht gefunden, überspringe.`);
-                        continue;
-                    }
-
-                    await supabase
-                        .from('players')
-                        .update({ score: player.score + points })
-                        .eq('id', pred.player_id);
-                }
+                // Score wird am Ende aus den Tabellen neu berechnet (nicht mehr hochgezählt).
+                if (points > 0) scoresChanged = true;
             }
         }
     }
@@ -272,7 +249,7 @@ async function runUpdate() {
         if (Object.keys(groupDiffs).length > 0) {
             const minDiff = Math.min(...Object.values(groupDiffs));
             for (const gName of Object.keys(groupDiffs).filter(g => groupDiffs[g] === minDiff)) {
-                await distributeBonusPoints('bq4', gName, 2);
+                if ((await distributeBonusPoints('bq4', gName, 2)) > 0) scoresChanged = true;
             }
         }
 
@@ -287,7 +264,7 @@ async function runUpdate() {
         for (const nation of TOP_20) {
             const teamInStandings = currentStandings.find((s: any) => s.team_name.toUpperCase() === nation);
             if (teamInStandings && !advancedTeamNames.has(nation)) {
-                await distributeBonusPoints('bq2', nation, 2);
+                if ((await distributeBonusPoints('bq2', nation, 2)) > 0) scoresChanged = true;
             }
         }
     }
@@ -300,7 +277,11 @@ async function runUpdate() {
         groups.forEach((g: any) => {
             const groupTeams = currentStandings
                 .filter((s: any) => s.group_id === g)
-                .sort((a: any, b: any) => b.points - a.points);
+                // Voller Tiebreaker wie in der Tabelle: Punkte -> Tordifferenz -> Tore.
+                .sort((a: any, b: any) =>
+                    (b.points - a.points) ||
+                    ((b.goals_for - b.goals_against) - (a.goals_for - a.goals_against)) ||
+                    (b.goals_for - a.goals_for));
             if (groupTeams.length > 0) groupWinners.push(groupTeams[0].team_name.toUpperCase());
         });
 
@@ -315,7 +296,7 @@ async function runUpdate() {
             if (loserTeam && groupWinners.includes(loserTeam)) eliminatedWinnersCount++;
         });
 
-        await distributeBonusPoints('bq6', eliminatedWinnersCount.toString(), 5);
+        if ((await distributeBonusPoints('bq6', eliminatedWinnersCount.toString(), 5)) > 0) scoresChanged = true;
     }
 
     if (tournamentFinished) {
@@ -324,7 +305,7 @@ async function runUpdate() {
         let wcWinner = null;
         if (finalMatch.score?.winner === 'HOME_TEAM') wcWinner = finalMatch.homeTeam?.name?.toUpperCase();
         else if (finalMatch.score?.winner === 'AWAY_TEAM') wcWinner = finalMatch.awayTeam?.name?.toUpperCase();
-        if (wcWinner) await distributeBonusPoints('bq1', wcWinner, 10);
+        if (wcWinner && (await distributeBonusPoints('bq1', wcWinner, 10)) > 0) scoresChanged = true;
 
         // BQ 5: 0:0-Spiele nach regulärer Spielzeit (90'), Verlängerung ignoriert.
         const cleanSheets = allMatches.filter((m: any) => {
@@ -332,7 +313,7 @@ async function runUpdate() {
             const s = score90(m);
             return s.home === 0 && s.away === 0;
         }).length;
-        await distributeBonusPoints('bq5', cleanSheets.toString(), 5);
+        if ((await distributeBonusPoints('bq5', cleanSheets.toString(), 5)) > 0) scoresChanged = true;
 
         // BQ 3: höchste Tordifferenz nach regulärer Spielzeit (90'), Verlängerung ignoriert.
         let maxDiff = 0;
@@ -353,8 +334,16 @@ async function runUpdate() {
         });
 
         for (const nation of [...new Set(dominantNations)]) {
-            await distributeBonusPoints('bq3', nation as string, 2);
+            if ((await distributeBonusPoints('bq3', nation as string, 2)) > 0) scoresChanged = true;
         }
+    }
+
+    // Scores absturzsicher aus den Tabellen neu berechnen — nur wenn sich was geändert hat,
+    // damit Leerlauf-Läufe keine unnötige Last erzeugen.
+    if (scoresChanged) {
+        const { error: recalcError } = await supabase.rpc('recompute_player_scores');
+        if (recalcError) console.error('Fehler beim Neuberechnen der Scores:', recalcError);
+        else console.log('Spieler-Scores neu berechnet.');
     }
 
     console.log("Update-Job abgeschlossen!");
