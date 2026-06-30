@@ -519,10 +519,11 @@
         }
 
         // --- MATCHES LOGIC ---
-        let matchFilterMode = 'date'; 
-        let activeDate = null; 
+        let matchFilterMode = 'date';
+        let activeDate = null;
         let activeGroup = 'A';
         let activeStage = null;
+        let matchesFirstRender = true; // erster Render: Datums-Leiste sofort positionieren (kein "Durchfliegen")
 
         function scrollToCurrentAction() {
             const nextMatch = currentMatches.find(m => m.status !== 'FINISHED');
@@ -877,7 +878,11 @@
 
             vm.appendChild(listContainer);
 
-            // Aktiven Filter-Button horizontal in die Mitte scrollen (nur den Container, nicht die Seite)
+            // Aktiven Filter-Button horizontal in die Mitte scrollen (nur den Container, nicht die Seite).
+            // Beim allerersten Render sofort springen (behavior 'auto'), damit beim App-Start
+            // nicht alle Tage bis heute durchscrollen; danach smooth für ein schönes Gefühl.
+            const scrollBehavior = matchesFirstRender ? 'auto' : 'smooth';
+            matchesFirstRender = false;
             requestAnimationFrame(() => {
                 const activeBtn = subFilterContainer.querySelector('.bg-green-900');
                 if (activeBtn) {
@@ -885,7 +890,7 @@
                     const btnLeft = activeBtn.offsetLeft;
                     const btnWidth = activeBtn.offsetWidth;
                     const targetScroll = btnLeft - (containerWidth / 2) + (btnWidth / 2);
-                    subFilterContainer.scrollTo({ left: targetScroll, behavior: 'smooth' });
+                    subFilterContainer.scrollTo({ left: targetScroll, behavior: scrollBehavior });
                 }
             });
         }
