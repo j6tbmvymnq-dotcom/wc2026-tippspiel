@@ -32,8 +32,13 @@
            left edge and clipped — i.e. truly hidden. */
         .kobracket {
             display: flex; align-items: stretch; min-width: max-content;
-            transition: transform 0.38s cubic-bezier(0.16,1,0.3,1), min-height 0.38s ease;
+            /* Animate ONLY transform (compositor) — never min-height (layout), which
+               would reflow the whole tree every frame. The height collapse is applied
+               instantly; the slide stays smooth. */
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
             will-change: transform;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
         }
         .koround { display: flex; flex-direction: column; width: 172px; flex: 0 0 auto; }
         /* The focused (leftmost visible) round hides its dangling incoming line */
@@ -1339,7 +1344,7 @@
 
             const applyFocus = i => {
                 bracketFocus = Math.max(0, Math.min(n - 1, i));
-                innerEl.style.transform = `translateX(${-bracketFocus * roundWidth}px)`;
+                innerEl.style.transform = `translate3d(${-bracketFocus * roundWidth}px, 0, 0)`;
                 innerEl.style.minHeight = (34 + counts[bracketFocus] * rowFor(bracketFocus)) + 'px';
                 roundEls.forEach((r, idx) => r.classList.toggle('ko-focus', idx === bracketFocus));
                 pills.forEach((pl, idx) => { pl.className = idx === bracketFocus ? pillActive : pillIdle; });
