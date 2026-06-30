@@ -12,6 +12,14 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 const MATCHES_URL = 'https://api.football-data.org/v4/competitions/WC/matches';
 const STANDINGS_URL = 'https://api.football-data.org/v4/competitions/WC/standings';
 
+// football-data v4 lässt die Live-Felder `minute` und `injuryTime` standardmäßig weg.
+// Sie werden nur geliefert, wenn man explizit die API-Version v4.1 anfordert (laut
+// football-data-Support; ändert sonst nichts an den stabilen Feldern).
+const API_HEADERS = {
+    'X-Auth-Token': footballApiKey,
+    'X-Api-Version': 'v4.1'
+};
+
 // --- HELPER: BONUS PUNKTE VERTEILEN ---
 async function distributeBonusPoints(qId: string, correctAnswer: string, pointsToAward: number) {
     const { data: correctPredictions, error } = await supabase
@@ -70,7 +78,7 @@ async function runUpdate() {
     // TEIL 1: SPIELE AKTUALISIEREN & PUNKTE BERECHNEN
     // ==========================================
     const matchesResponse = await fetch(MATCHES_URL, {
-        headers: { 'X-Auth-Token': footballApiKey }
+        headers: API_HEADERS
     });
     if (!matchesResponse.ok) throw new Error(`API Fehler (Matches): ${matchesResponse.status}`);
 
@@ -108,9 +116,8 @@ async function runUpdate() {
         const homeScorePen = pen.home ?? null;
         const awayScorePen = pen.away ?? null;
 
-        // Diagnose: `match.minute` wird hier korrekt gelesen (v4-Feld auf Top-Level).
-        // Bleibt die Spalte leer, liefert die API selbst keinen Wert. Dieser Log zeigt
-        // im Supabase-Function-Log, was für Live-Spiele wirklich ankommt.
+        // `minute`/`injuryTime` kommen jetzt über den v4.1-Header (siehe API_HEADERS).
+        // Der Log bestätigt bei Live-Spielen im Supabase-Function-Log, dass Werte ankommen.
         if (match.status === 'IN_PLAY' || match.status === 'PAUSED') {
             console.log(`[LIVE] ${match.homeTeam?.name} vs ${match.awayTeam?.name} | status=${match.status} | minute=${JSON.stringify(match.minute)} | injuryTime=${JSON.stringify(match.injuryTime)}`);
         }
@@ -196,7 +203,7 @@ async function runUpdate() {
     // TEIL 2: GRUPPENTABELLEN AKTUALISIEREN
     // ==========================================
     const standingsResponse = await fetch(STANDINGS_URL, {
-        headers: { 'X-Auth-Token': footballApiKey }
+        headers: API_HEADERS
     });
     let currentStandings: any[] = [];
 
