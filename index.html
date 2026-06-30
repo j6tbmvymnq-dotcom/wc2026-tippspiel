@@ -384,7 +384,7 @@
             loadDashboard(players[0]);
         }
 
-        function loadDashboard(player) {
+        async function loadDashboard(player) {
             currentPlayerId = player.id;
             document.getElementById('user-nickname').textContent = player.nickname;
             const bqDeadline = new Date('2026-06-11T21:00:00+02:00');
@@ -394,9 +394,17 @@
                 document.getElementById('btn-edit-bonus').classList.add('hidden');
             }
             document.getElementById('user-score').textContent = player.score;
+
+            // Spiele laden und das Tab-Label (Intel/Bracket) setzen, BEVOR das Dashboard
+            // sichtbar wird — sonst blitzt beim Start kurz "Intel" auf und springt auf "Bracket".
+            await fetchMatchesAndPredictions(true);
+
             document.getElementById('loading-screen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
-            fetchMatchesAndPredictions();
+
+            // Jetzt ist das Layout verfügbar: Matches rendern + Datums-Leiste auf heute zentrieren.
+            renderMatches();
+            scrollToCurrentAction();
             checkAndShowAnnouncement();
         }
 
@@ -535,16 +543,20 @@
             }
         }
 
-        async function fetchMatchesAndPredictions() {
+        async function fetchMatchesAndPredictions(deferRender = false) {
             const { data: matches } = await supabaseClient.from('matches').select('*').order('kickoff', { ascending: true });
             const { data: predictions } = await supabaseClient.from('predictions').select('*').eq('player_id', currentPlayerId);
             const { data: initialTrends } = await supabaseClient.from('public_match_trends').select('*');
             currentTrends = initialTrends;
             currentMatches = matches || [];
             currentPredictions = predictions || [];
-            renderMatches();
             updateIntelTab();
-            scrollToCurrentAction();
+            // Beim ersten Laden wird das Rendern aufgeschoben, bis das Dashboard sichtbar
+            // ist (Layout für die Datums-Leiste nötig) — das Tab-Label steht aber schon.
+            if (!deferRender) {
+                renderMatches();
+                scrollToCurrentAction();
+            }
         }
 
         function setMatchFilterMode(mode) {
