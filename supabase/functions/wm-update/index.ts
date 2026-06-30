@@ -53,6 +53,15 @@ async function distributeBonusPoints(qId: string, correctAnswer: string, pointsT
     }
 }
 
+// --- HELPER: 90-Minuten-Ergebnis eines Spiels (regularTime, sonst fullTime) ---
+// Konsistent zur Spielwertung: nur die reguläre Spielzeit zählt, Verlängerung/Elfmeter
+// werden ignoriert.
+function score90(m: any): { home: number | null; away: number | null } {
+    const ft = m.score?.fullTime ?? {};
+    const rt = m.score?.regularTime ?? {};
+    return { home: rt.home ?? ft.home ?? null, away: rt.away ?? ft.away ?? null };
+}
+
 // --- MAIN UPDATE JOB ---
 async function runUpdate() {
     console.log("Starte WM-Update-Job...");
@@ -98,6 +107,13 @@ async function runUpdate() {
 
         const homeScorePen = pen.home ?? null;
         const awayScorePen = pen.away ?? null;
+
+        // Diagnose: `match.minute` wird hier korrekt gelesen (v4-Feld auf Top-Level).
+        // Bleibt die Spalte leer, liefert die API selbst keinen Wert. Dieser Log zeigt
+        // im Supabase-Function-Log, was für Live-Spiele wirklich ankommt.
+        if (match.status === 'IN_PLAY' || match.status === 'PAUSED') {
+            console.log(`[LIVE] ${match.homeTeam?.name} vs ${match.awayTeam?.name} | status=${match.status} | minute=${JSON.stringify(match.minute)} | injuryTime=${JSON.stringify(match.injuryTime)}`);
+        }
 
         const upsertObj: any = {
             id: matchId,
@@ -303,19 +319,22 @@ async function runUpdate() {
         else if (finalMatch.score?.winner === 'AWAY_TEAM') wcWinner = finalMatch.awayTeam?.name?.toUpperCase();
         if (wcWinner) await distributeBonusPoints('bq1', wcWinner, 10);
 
-        const cleanSheets = allMatches.filter((m: any) =>
-            m.status === 'FINISHED' &&
-            m.score?.fullTime?.home === 0 &&
-            m.score?.fullTime?.away === 0
-        ).length;
+        // BQ 5: 0:0-Spiele nach regulärer Spielzeit (90'), Verlängerung ignoriert.
+        const cleanSheets = allMatches.filter((m: any) => {
+            if (m.status !== 'FINISHED') return false;
+            const s = score90(m);
+            return s.home === 0 && s.away === 0;
+        }).length;
         await distributeBonusPoints('bq5', cleanSheets.toString(), 5);
 
+        // BQ 3: höchste Tordifferenz nach regulärer Spielzeit (90'), Verlängerung ignoriert.
         let maxDiff = 0;
         let dominantNations: string[] = [];
         allMatches.forEach((m: any) => {
             if (m.status === 'FINISHED') {
-                const hGoals = m.score?.fullTime?.home ?? 0;
-                const aGoals = m.score?.fullTime?.away ?? 0;
+                const s = score90(m);
+                const hGoals = s.home ?? 0;
+                const aGoals = s.away ?? 0;
                 const diff = Math.abs(hGoals - aGoals);
                 if (diff > maxDiff) {
                     maxDiff = diff;
