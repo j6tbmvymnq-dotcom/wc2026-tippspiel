@@ -1450,8 +1450,9 @@
                     const bq = BONUS_QUESTIONS.find(q => q.id === p.question_id);
                     if (bq) {
                         calculatedTotal += p.points_earned;
-                        const bqShort = bq.text.split(':')[0];
-                        const bqQuestion = bq.text.split(':')[1]?.trim() || '';
+                        const bqCi = bq.text.indexOf(':');
+                        const bqShort = bqCi >= 0 ? bq.text.slice(0, bqCi) : bq.text;
+                        const bqQuestion = bqCi >= 0 ? bq.text.slice(bqCi + 1).trim() : '';
                         content.innerHTML += `
                             <div class="flex justify-between items-start py-2 hover:bg-stone-800/30 rounded px-1 transition-colors">
                                 <div class="flex flex-col truncate pr-4 gap-0.5">
@@ -1512,9 +1513,10 @@
                 const resolved = bqResolved(q.id);
                 const maxPts = BONUS_POINTS[q.id] || 0;
 
-                const parts = q.text.split(':');
-                const shortLbl = parts[0].trim();
-                const question = (parts[1] || '').trim();
+                // Nur am ersten ':' trennen — der Fragetext selbst kann ':' enthalten (z. B. "0:0").
+                const ci = q.text.indexOf(':');
+                const shortLbl = ci >= 0 ? q.text.slice(0, ci).trim() : q.text.trim();
+                const question = ci >= 0 ? q.text.slice(ci + 1).trim() : '';
 
                 if (points > 0) { totalPoints += points; correctCount += 1; }
 
