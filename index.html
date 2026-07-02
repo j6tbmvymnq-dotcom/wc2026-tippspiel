@@ -116,6 +116,12 @@
 
                     <!-- Icon buttons -->
                     <div class="flex items-center gap-2">
+                        <!-- Admin Intel Button — Shield icon (only visible for mini admins) -->
+                        <button id="btn-admin" onclick="openAdminPanel()" title="Evaluation Intel" class="hidden text-amber-500/80 hover:text-amber-400 transition-colors p-2 bg-stone-800 rounded-full border border-amber-900/50 shadow-md focus:outline-none focus:ring-2 focus:ring-amber-600">
+                            <svg width="20" height="20" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                        </button>
                         <!-- WC Winner Button — Trophy icon -->
                         <button onclick="openIntelModal()" title="Who wins the Cup?" class="text-stone-400 hover:text-green-400 transition-colors p-2 bg-stone-800 rounded-full border border-stone-700 shadow-md focus:outline-none focus:ring-2 focus:ring-green-600">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,6 +354,27 @@
         </div>
     </div>
 
+    <!-- ADMIN INTEL PANEL (read-only, only reachable for mini admins) -->
+    <div id="admin-modal" class="hidden fixed inset-0 bg-stone-950/95 z-[300] overflow-y-auto backdrop-blur-sm">
+        <div class="max-w-lg mx-auto min-h-screen bg-stone-950 border-x border-stone-800">
+            <div class="sticky top-0 z-10 p-4 border-b border-amber-900/40 bg-stone-950 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-black tracking-widest uppercase text-amber-500">Evaluation Intel</h2>
+                    <p class="text-[9px] text-stone-500 uppercase tracking-widest font-mono">Read-only · Mini admin access</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="refreshAdminIntel()" title="Refresh" class="text-stone-500 hover:text-amber-400 p-2 bg-stone-900 rounded-full border border-stone-800 transition-colors">
+                        <svg width="16" height="16" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+                    <button onclick="closeAdminPanel()" class="text-stone-500 hover:text-stone-100 font-bold text-3xl leading-none px-2 transition-colors">&times;</button>
+                </div>
+            </div>
+            <div id="admin-content" class="p-4 pb-16 space-y-6 font-mono">
+                <p class="text-center text-stone-600 text-sm">Loading intel...</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- XSS ESCAPING ---
         function esc(str) {
@@ -406,6 +433,7 @@
             renderMatches();
             scrollToCurrentAction();
             checkAndShowAnnouncement();
+            checkAdminIntel(); // fire-and-forget: zeigt den Admin-Button nur für Mini-Admins
         }
 
         async function checkAndShowAnnouncement() {
@@ -1554,6 +1582,237 @@
             list.innerHTML = html;
             document.getElementById('bonus-total-display').textContent = totalPoints;
             document.getElementById('bonus-correct-display').textContent = `${correctCount}/${BONUS_QUESTIONS.length}`;
+        }
+
+        // --- ADMIN INTEL (mini admins, read-only) ---
+        // Access is decided SERVER-SIDE: get_admin_intel verifies the caller's secret
+        // via login_operative and checks the nickname against app_settings.admin_nicknames.
+        // Non-admins get null and never see the button. Purely read-only — the admin
+        // keeps playing normally.
+        let adminIntel = null;
+        let adminState = { bq: 'bq1', scenario: '', match: null };
+
+        async function checkAdminIntel() {
+            try {
+                const { data, error } = await supabaseClient.rpc('get_admin_intel', { p_secret: currentPassphrase });
+                if (!error && data && data.players) {
+                    adminIntel = data;
+                    document.getElementById('btn-admin').classList.remove('hidden');
+                }
+            } catch (e) { /* not an admin or RPC missing — stay hidden */ }
+        }
+
+        function openAdminPanel() {
+            document.getElementById('admin-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            renderAdminPanel();
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        async function refreshAdminIntel() {
+            document.getElementById('admin-content').innerHTML = '<p class="text-center text-stone-600 text-sm">Refreshing intel...</p>';
+            const { data, error } = await supabaseClient.rpc('get_admin_intel', { p_secret: currentPassphrase });
+            if (!error && data && data.players) adminIntel = data;
+            renderAdminPanel();
+        }
+
+        const adminCmp = (a, b) =>
+            (b.score - a.score) ||
+            ((b.exact_hits || 0) - (a.exact_hits || 0)) ||
+            ((b.bonus_hits || 0) - (a.bonus_hits || 0));
+
+        function adminBonusOf(playerId, qId) {
+            return (adminIntel.bonus || []).find(x => x.player_id === playerId && x.question_id === qId) || null;
+        }
+
+        function adminSetBQ(q) { adminState.bq = q; renderAdminPanel(); }
+        function adminSetScenario(v) { adminState.scenario = v; renderAdminPanel(); }
+        function adminSetMatch(id) { adminState.match = id; renderAdminPanel(); }
+
+        function renderAdminPanel() {
+            const c = document.getElementById('admin-content');
+            if (!adminIntel || !adminIntel.players) {
+                c.innerHTML = '<p class="text-center text-stone-600 text-sm">No intel available.</p>';
+                return;
+            }
+
+            const players = adminIntel.players.slice().sort(adminCmp);
+            const top = players.slice(0, 50);
+            const secTitle = (t, sub) => `
+                <div class="border-b border-stone-800 pb-1 mb-2">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-amber-500/90">${t}</p>
+                    ${sub ? `<p class="text-[9px] text-stone-600 uppercase tracking-widest">${sub}</p>` : ''}
+                </div>`;
+            const chip = (label, active, onclick) =>
+                `<button onclick="${onclick}" class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-colors ${active ? 'bg-amber-900/40 border-amber-700 text-amber-300' : 'bg-stone-900 border-stone-800 text-stone-500'}">${label}</button>`;
+
+            // ---- 1) Standings incl. tie-breaks ----
+            let standingsRows = '';
+            top.forEach((p, i) => {
+                standingsRows += `
+                    <tr class="border-b border-stone-800/50 ${p.id === currentPlayerId ? 'bg-stone-800/60' : ''}">
+                        <td class="py-1 pr-2 text-right text-stone-500 w-8">${i + 1}</td>
+                        <td class="py-1 pr-2 text-stone-300 truncate max-w-[130px]">${esc(p.nickname)}</td>
+                        <td class="py-1 pr-2 text-right text-green-500 font-black">${p.score}</td>
+                        <td class="py-1 pr-2 text-right text-stone-400">${p.exact_hits || 0}</td>
+                        <td class="py-1 text-right text-stone-400">${p.bonus_hits || 0}</td>
+                    </tr>`;
+            });
+            const standingsHtml = `
+                ${secTitle('1 · Official standings', 'Tie-break: score → exact hits → bonus hits · top 50 of ' + players.length)}
+                <div class="max-h-72 overflow-y-auto border border-stone-800 rounded-lg p-2 bg-stone-900/40">
+                    <table class="w-full text-[11px]">
+                        <thead><tr class="text-[9px] text-stone-600 uppercase tracking-widest text-right">
+                            <th class="pr-2">#</th><th class="text-left pr-2">User</th><th class="pr-2">Pts</th><th class="pr-2">Exact</th><th>BQ</th>
+                        </tr></thead>
+                        <tbody>${standingsRows}</tbody>
+                    </table>
+                </div>`;
+
+            // ---- 2) Bonus picks of top 50 (selectable question) ----
+            const bqChips = BONUS_QUESTIONS.map(q =>
+                chip(q.id.toUpperCase(), adminState.bq === q.id, `adminSetBQ('${q.id}')`)).join(' ');
+            const counts = {};
+            let bqRows = '';
+            top.forEach((p, i) => {
+                const bp = adminBonusOf(p.id, adminState.bq);
+                const ans = bp ? bp.answer : null;
+                if (ans) counts[ans] = (counts[ans] || 0) + 1;
+                let st;
+                if (!bp) st = '<span class="text-stone-700">—</span>';
+                else if ((bp.points_earned || 0) > 0) st = `<span class="text-green-500 font-black">+${bp.points_earned}</span>`;
+                else if (bp.evaluated) st = '<span class="text-red-500/70">0</span>';
+                else st = '<span class="text-amber-500/80">open</span>';
+                bqRows += `
+                    <tr class="border-b border-stone-800/50 ${p.id === currentPlayerId ? 'bg-stone-800/60' : ''}">
+                        <td class="py-1 pr-2 text-right text-stone-500 w-8">${i + 1}</td>
+                        <td class="py-1 pr-2 text-stone-300 truncate max-w-[110px]">${esc(p.nickname)}</td>
+                        <td class="py-1 pr-2 text-stone-200 font-bold truncate max-w-[110px]">${ans ? esc(ans) : '—'}</td>
+                        <td class="py-1 text-right">${st}</td>
+                    </tr>`;
+            });
+            const countsHtml = Object.entries(counts).sort((a, b) => b[1] - a[1])
+                .map(([a, n]) => `<span class="inline-block bg-stone-900 border border-stone-800 rounded px-2 py-0.5 mr-1 mb-1 text-[10px]"><span class="text-stone-300 font-bold">${esc(a)}</span> <span class="text-amber-500">×${n}</span></span>`)
+                .join('') || '<span class="text-stone-700 text-[10px]">No picks.</span>';
+            const bqQuestion = BONUS_QUESTIONS.find(q => q.id === adminState.bq);
+            const bqHtml = `
+                ${secTitle('2 · Bonus picks (top 50)', 'Who picked what — open questions decide an early evaluation')}
+                <div class="flex flex-wrap gap-1.5 mb-2">${bqChips}</div>
+                <p class="text-[10px] text-stone-500 mb-2">${esc(bqQuestion ? bqQuestion.text : '')}</p>
+                <div class="mb-2">${countsHtml}</div>
+                <div class="max-h-72 overflow-y-auto border border-stone-800 rounded-lg p-2 bg-stone-900/40">
+                    <table class="w-full text-[11px]"><tbody>${bqRows}</tbody></table>
+                </div>`;
+
+            // ---- 3) What-if: BQ1 winner scenario ----
+            const openBq1Answers = [...new Set((adminIntel.bonus || [])
+                .filter(x => x.question_id === 'bq1' && !x.evaluated && x.answer)
+                .map(x => x.answer))].sort();
+            let scenarioHtml = `${secTitle('3 · What-if: World Cup winner', 'BQ1 = 10 pts — the big swing for an early evaluation')}`;
+            scenarioHtml += `<select onchange="adminSetScenario(this.value)" class="w-full border border-stone-700 p-2.5 rounded-lg bg-stone-900 text-stone-200 text-xs mb-2 outline-none">
+                <option value="" ${!adminState.scenario ? 'selected' : ''}>Select champion scenario...</option>
+                ${openBq1Answers.map(a => `<option value="${esc(a)}" ${adminState.scenario === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
+            </select>`;
+            if (adminState.scenario) {
+                const projected = players.map(p => {
+                    const bp = adminBonusOf(p.id, 'bq1');
+                    const hit = bp && !bp.evaluated && bp.answer === adminState.scenario;
+                    return { ...p, projScore: p.score + (hit ? 10 : 0), projBonus: (p.bonus_hits || 0) + (hit ? 1 : 0), hit };
+                }).sort((a, b) =>
+                    (b.projScore - a.projScore) ||
+                    ((b.exact_hits || 0) - (a.exact_hits || 0)) ||
+                    (b.projBonus - a.projBonus));
+                const oldRank = {}; players.forEach((p, i) => oldRank[p.id] = i + 1);
+                let projRows = '';
+                projected.slice(0, 50).forEach((p, i) => {
+                    const delta = oldRank[p.id] - (i + 1);
+                    const move = delta > 0 ? `<span class="text-green-500">▲${delta}</span>` : (delta < 0 ? `<span class="text-red-500">▼${-delta}</span>` : '<span class="text-stone-700">·</span>');
+                    projRows += `
+                        <tr class="border-b border-stone-800/50 ${p.hit ? 'bg-green-950/30' : ''} ${p.id === currentPlayerId ? 'bg-stone-800/60' : ''}">
+                            <td class="py-1 pr-2 text-right text-stone-500 w-8">${i + 1}</td>
+                            <td class="py-1 pr-1 w-8 text-center text-[10px]">${move}</td>
+                            <td class="py-1 pr-2 text-stone-300 truncate max-w-[110px]">${esc(p.nickname)}${p.hit ? ' <span class="text-green-600 text-[9px]">+10</span>' : ''}</td>
+                            <td class="py-1 text-right text-green-500 font-black">${p.projScore}</td>
+                        </tr>`;
+                });
+                scenarioHtml += `
+                    <p class="text-[9px] text-stone-600 uppercase tracking-widest mb-1">If <span class="text-amber-500">${esc(adminState.scenario)}</span> wins the cup:</p>
+                    <div class="max-h-72 overflow-y-auto border border-stone-800 rounded-lg p-2 bg-stone-900/40">
+                        <table class="w-full text-[11px]"><tbody>${projRows}</tbody></table>
+                    </div>`;
+            }
+
+            // ---- 4) Open match predictions (top 50) ----
+            const openPreds = adminIntel.open_predictions || [];
+            const matchesById = {};
+            openPreds.forEach(op => {
+                if (!matchesById[op.match_id]) matchesById[op.match_id] = { meta: op, preds: [] };
+                matchesById[op.match_id].preds.push(op);
+            });
+            const openMatches = Object.values(matchesById).sort((a, b) => new Date(a.meta.kickoff) - new Date(b.meta.kickoff));
+            let openHtml = `${secTitle('4 · Open match predictions (top 50)', 'Remaining fixtures that can still move the table')}`;
+            if (openMatches.length === 0) {
+                openHtml += '<p class="text-stone-700 text-[11px]">No open matches with predictions.</p>';
+            } else {
+                if (adminState.match === null || !matchesById[adminState.match]) adminState.match = openMatches[0].meta.match_id;
+                openHtml += `<div class="flex flex-wrap gap-1.5 mb-2">` + openMatches.map(m =>
+                    chip(`${esc(m.meta.home_team)} v ${esc(m.meta.away_team)}`, adminState.match === m.meta.match_id, `adminSetMatch(${m.meta.match_id})`)).join(' ') + `</div>`;
+                const sel = matchesById[adminState.match];
+                const byPlayer = {}; sel.preds.forEach(pr => byPlayer[pr.player_id] = pr);
+                let h = 0, d = 0, aWin = 0, rows = '';
+                top.forEach((p, i) => {
+                    const pr = byPlayer[p.id];
+                    if (pr) { const s = Math.sign(pr.home_pred - pr.away_pred); if (s > 0) h++; else if (s < 0) aWin++; else d++; }
+                    rows += `
+                        <tr class="border-b border-stone-800/50 ${p.id === currentPlayerId ? 'bg-stone-800/60' : ''}">
+                            <td class="py-1 pr-2 text-right text-stone-500 w-8">${i + 1}</td>
+                            <td class="py-1 pr-2 text-stone-300 truncate max-w-[130px]">${esc(p.nickname)}</td>
+                            <td class="py-1 text-right ${pr ? 'text-stone-100 font-black' : 'text-stone-700'}">${pr ? `${pr.home_pred}:${pr.away_pred}` : '—'}</td>
+                        </tr>`;
+                });
+                openHtml += `
+                    <p class="text-[10px] text-stone-500 mb-2">Top-50 tendency: <span class="text-green-500 font-bold">Home ${h}</span> · <span class="text-stone-400 font-bold">Draw ${d}</span> · <span class="text-amber-500 font-bold">Away ${aWin}</span></p>
+                    <div class="max-h-72 overflow-y-auto border border-stone-800 rounded-lg p-2 bg-stone-900/40">
+                        <table class="w-full text-[11px]"><tbody>${rows}</tbody></table>
+                    </div>`;
+            }
+
+            // ---- 5) Export ----
+            const exportHtml = `
+                ${secTitle('5 · Export', 'Full snapshot for offline evaluation & documentation')}
+                <button onclick="exportAdminCSV()" class="w-full bg-stone-900 text-amber-500 font-black py-3 px-4 rounded-xl border border-amber-900/50 hover:bg-stone-800 transition-colors uppercase tracking-widest text-xs">Download CSV (all players + all BQ picks)</button>
+                <p class="text-[9px] text-stone-700 uppercase tracking-widest text-center mt-2">Snapshot: ${adminIntel.generated_at ? new Date(adminIntel.generated_at).toLocaleString('en-US', { timeZone: 'Europe/Vilnius', hour12: false }) : '—'}</p>`;
+
+            c.innerHTML = [standingsHtml, bqHtml, scenarioHtml, openHtml, exportHtml]
+                .map(s => `<div>${s}</div>`).join('');
+        }
+
+        function exportAdminCSV() {
+            if (!adminIntel || !adminIntel.players) return;
+            const players = adminIntel.players.slice().sort(adminCmp);
+            const csvEsc = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+            const head = ['rank', 'nickname', 'score', 'exact_hits', 'bonus_hits'];
+            BONUS_QUESTIONS.forEach(q => { head.push(q.id + '_answer', q.id + '_points', q.id + '_status'); });
+            const lines = [head.join(';')];
+            players.forEach((p, i) => {
+                const row = [i + 1, csvEsc(p.nickname), p.score, p.exact_hits || 0, p.bonus_hits || 0];
+                BONUS_QUESTIONS.forEach(q => {
+                    const bp = adminBonusOf(p.id, q.id);
+                    row.push(csvEsc(bp ? bp.answer : ''), bp ? (bp.points_earned || 0) : '', bp ? (bp.evaluated ? 'evaluated' : 'open') : 'no pick');
+                });
+                lines.push(row.join(';'));
+            });
+            const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `tippspiel-evaluation-${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
         }
 
         // --- LEADERBOARD ---
