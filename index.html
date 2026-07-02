@@ -1629,6 +1629,22 @@
             return (adminIntel.bonus || []).find(x => x.player_id === playerId && x.question_id === qId) || null;
         }
 
+        // A question counts as evaluated when points were distributed (some row has
+        // evaluated=true) OR its stage is finished — belt and braces, since wrong
+        // answers keep evaluated=false forever.
+        function adminBqEvaluated(qId) {
+            return (adminIntel.bonus || []).some(x => x.question_id === qId && x.evaluated) || bqResolved(qId);
+        }
+
+        // 0:0 tracker for BQ5: count of 90'-results 0:0 so far + open matches.
+        // Final count is guaranteed to land in [soFar, soFar + remaining].
+        function adminZeroZeroStats() {
+            const fin = currentMatches.filter(m => m.status === 'FINISHED');
+            const soFar = fin.filter(m => m.home_score === 0 && m.away_score === 0).length;
+            const remaining = currentMatches.filter(m => m.status !== 'FINISHED').length;
+            return { soFar, remaining, max: soFar + remaining };
+        }
+
         function adminSetBQ(q) { adminState.bq = q; renderAdminPanel(); }
         function adminSetScenario(v) { adminState.scenario = v; renderAdminPanel(); }
         function adminSetMatch(id) { adminState.match = id; renderAdminPanel(); }
@@ -1673,46 +1689,85 @@
                     </table>
                 </div>`;
 
-            // ---- 2) Bonus picks of top 50 (selectable question) ----
-            const bqChips = BONUS_QUESTIONS.map(q =>
-                chip(q.id.toUpperCase(), adminState.bq === q.id, `adminSetBQ('${q.id}')`)).join(' ');
-            const counts = {};
-            let bqRows = '';
-            top.forEach((p, i) => {
-                const bp = adminBonusOf(p.id, adminState.bq);
-                const ans = bp ? bp.answer : null;
-                if (ans) counts[ans] = (counts[ans] || 0) + 1;
-                let st;
-                if (!bp) st = '<span class="text-stone-700">—</span>';
-                else if ((bp.points_earned || 0) > 0) st = `<span class="text-green-500 font-black">+${bp.points_earned}</span>`;
-                else if (bp.evaluated) st = '<span class="text-red-500/70">0</span>';
-                else st = '<span class="text-amber-500/80">open</span>';
-                bqRows += `
-                    <tr class="border-b border-stone-800/50 ${p.id === currentPlayerId ? 'bg-stone-800/60' : ''}">
-                        <td class="py-1 pr-2 text-right text-stone-500 w-8">${i + 1}</td>
-                        <td class="py-1 pr-2 text-stone-300 truncate max-w-[110px]">${esc(p.nickname)}</td>
-                        <td class="py-1 pr-2 text-stone-200 font-bold truncate max-w-[110px]">${ans ? esc(ans) : '—'}</td>
-                        <td class="py-1 text-right">${st}</td>
-                    </tr>`;
-            });
-            const countsHtml = Object.entries(counts).sort((a, b) => b[1] - a[1])
-                .map(([a, n]) => `<span class="inline-block bg-stone-900 border border-stone-800 rounded px-2 py-0.5 mr-1 mb-1 text-[10px]"><span class="text-stone-300 font-bold">${esc(a)}</span> <span class="text-amber-500">×${n}</span></span>`)
-                .join('') || '<span class="text-stone-700 text-[10px]">No picks.</span>';
-            const bqQuestion = BONUS_QUESTIONS.find(q => q.id === adminState.bq);
-            const bqHtml = `
-                ${secTitle('2 · Bonus picks (top 50)', 'Who picked what — open questions decide an early evaluation')}
-                <div class="flex flex-wrap gap-1.5 mb-2">${bqChips}</div>
-                <p class="text-[10px] text-stone-500 mb-2">${esc(bqQuestion ? bqQuestion.text : '')}</p>
-                <div class="mb-2">${countsHtml}</div>
-                <div class="max-h-72 overflow-y-auto border border-stone-800 rounded-lg p-2 bg-stone-900/40">
-                    <table class="w-full text-[11px]"><tbody>${bqRows}</tbody></table>
-                </div>`;
+            // ---- 2) 0:0 tracker (BQ5 feasibility) ----
+            const zz = adminZeroZeroStats();
+            const zeroHtml = `
+                ${secTitle('2 · 0:0 tracker (BQ5)', 'Feasibility of the clean-sheet picks')}
+                <div class="flex gap-2 text-center">
+                    <div class="flex-1 bg-stone-900/40 border border-stone-800 rounded-lg p-2">
+                        <p class="text-2xl font-black text-stone-100">${zz.soFar}</p>
+                        <p class="text-[9px] text-stone-500 uppercase tracking-widest">0:0 so far (90')</p>
+                    </div>
+                    <div class="flex-1 bg-stone-900/40 border border-stone-800 rounded-lg p-2">
+                        <p class="text-2xl font-black text-stone-100">${zz.remaining}</p>
+                        <p class="text-[9px] text-stone-500 uppercase tracking-widest">Matches left</p>
+                    </div>
+                    <div class="flex-1 bg-stone-900/40 border border-amber-900/40 rounded-lg p-2">
+                        <p class="text-2xl font-black text-amber-500">${zz.soFar}–${zz.max}</p>
+                        <p class="text-[9px] text-stone-500 uppercase tracking-widest">Final range</p>
+                    </div>
+                </div>
+                <p class="text-[9px] text-stone-600 uppercase tracking-widest mt-1.5">Only BQ5 picks within ${zz.soFar}–${zz.max} can still score · picks outside are mathematically dead</p>`;
+
+            // ---- 3) Bonus picks of top 50 — evaluated questions are hidden ----
+            const openQuestions = BONUS_QUESTIONS.filter(q => !adminBqEvaluated(q.id));
+            let bqHtml;
+            if (openQuestions.length === 0) {
+                bqHtml = `${secTitle('3 · Bonus picks (top 50)', 'All bonus questions are evaluated')}<p class="text-stone-700 text-[11px]">Nothing open — all BQ points are already in the standings.</p>`;
+            } else {
+                if (!openQuestions.some(q => q.id === adminState.bq)) adminState.bq = openQuestions[0].id;
+                const bqChips = openQuestions.map(q =>
+                    chip(q.id.toUpperCase(), adminState.bq === q.id, `adminSetBQ('${q.id}')`)).join(' ');
+                const isBq5 = adminState.bq === 'bq5';
+                const alive = ans => { const n = parseInt(ans, 10); return !isNaN(n) && n >= zz.soFar && n <= zz.max; };
+                const counts = {};
+                let bqRows = '', aliveCount = 0, pickCount = 0;
+                top.forEach((p, i) => {
+                    const bp = adminBonusOf(p.id, adminState.bq);
+                    const ans = bp ? bp.answer : null;
+                    if (ans) counts[ans] = (counts[ans] || 0) + 1;
+                    let st;
+                    if (!bp) st = '<span class="text-stone-700">—</span>';
+                    else if ((bp.points_earned || 0) > 0) st = `<span class="text-green-500 font-black">+${bp.points_earned}</span>`;
+                    else if (bp.evaluated) st = '<span class="text-red-500/70">0</span>';
+                    else st = '<span class="text-amber-500/80">open</span>';
+                    let ansHtml = ans ? esc(ans) : '—';
+                    if (isBq5 && ans) {
+                        pickCount++;
+                        if (alive(ans)) { aliveCount++; ansHtml += ' <span class="text-green-600 text-[9px]">alive</span>'; }
+                        else { ansHtml = `<span class="line-through text-stone-600">${esc(ans)}</span> <span class="text-red-600/80 text-[9px]">dead</span>`; }
+                    }
+                    bqRows += `
+                        <tr class="border-b border-stone-800/50 ${p.id === currentPlayerId ? 'bg-stone-800/60' : ''}">
+                            <td class="py-1 pr-2 text-right text-stone-500 w-8">${i + 1}</td>
+                            <td class="py-1 pr-2 text-stone-300 truncate max-w-[110px]">${esc(p.nickname)}</td>
+                            <td class="py-1 pr-2 text-stone-200 font-bold truncate max-w-[140px]">${ansHtml}</td>
+                            <td class="py-1 text-right">${st}</td>
+                        </tr>`;
+                });
+                const countsHtml = Object.entries(counts).sort((a, b) => b[1] - a[1])
+                    .map(([a, n]) => {
+                        const dead = isBq5 && !alive(a);
+                        return `<span class="inline-block bg-stone-900 border ${dead ? 'border-red-900/40' : 'border-stone-800'} rounded px-2 py-0.5 mr-1 mb-1 text-[10px]"><span class="${dead ? 'line-through text-stone-600' : 'text-stone-300 font-bold'}">${esc(a)}</span> <span class="text-amber-500">×${n}</span></span>`;
+                    })
+                    .join('') || '<span class="text-stone-700 text-[10px]">No picks.</span>';
+                const bqQuestion = BONUS_QUESTIONS.find(q => q.id === adminState.bq);
+                bqHtml = `
+                    ${secTitle('3 · Bonus picks (top 50)', 'Open questions only — evaluated ones are already in the standings')}
+                    <div class="flex flex-wrap gap-1.5 mb-2">${bqChips}</div>
+                    <p class="text-[10px] text-stone-500 mb-2">${esc(bqQuestion ? bqQuestion.text : '')}</p>
+                    ${isBq5 ? `<p class="text-[10px] text-stone-500 mb-2">Reachable picks in top 50: <span class="text-green-500 font-bold">${aliveCount}</span> / ${pickCount}</p>` : ''}
+                    <div class="mb-2">${countsHtml}</div>
+                    <div class="max-h-72 overflow-y-auto border border-stone-800 rounded-lg p-2 bg-stone-900/40">
+                        <table class="w-full text-[11px]"><tbody>${bqRows}</tbody></table>
+                    </div>`;
+            }
 
             // ---- 3) What-if: BQ1 winner scenario ----
             const openBq1Answers = [...new Set((adminIntel.bonus || [])
                 .filter(x => x.question_id === 'bq1' && !x.evaluated && x.answer)
                 .map(x => x.answer))].sort();
-            let scenarioHtml = `${secTitle('3 · What-if: World Cup winner', 'BQ1 = 10 pts — the big swing for an early evaluation')}`;
+            let scenarioHtml = `${secTitle('4 · What-if: World Cup winner', 'BQ1 = 10 pts — the big swing for an early evaluation')}`;
             scenarioHtml += `<select onchange="adminSetScenario(this.value)" class="w-full border border-stone-700 p-2.5 rounded-lg bg-stone-900 text-stone-200 text-xs mb-2 outline-none">
                 <option value="" ${!adminState.scenario ? 'selected' : ''}>Select champion scenario...</option>
                 ${openBq1Answers.map(a => `<option value="${esc(a)}" ${adminState.scenario === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
@@ -1754,7 +1809,7 @@
                 matchesById[op.match_id].preds.push(op);
             });
             const openMatches = Object.values(matchesById).sort((a, b) => new Date(a.meta.kickoff) - new Date(b.meta.kickoff));
-            let openHtml = `${secTitle('4 · Open match predictions (top 50)', 'Remaining fixtures that can still move the table')}`;
+            let openHtml = `${secTitle('5 · Open match predictions (top 50)', 'Remaining fixtures that can still move the table')}`;
             if (openMatches.length === 0) {
                 openHtml += '<p class="text-stone-700 text-[11px]">No open matches with predictions.</p>';
             } else {
@@ -1783,11 +1838,11 @@
 
             // ---- 5) Export ----
             const exportHtml = `
-                ${secTitle('5 · Export', 'Full snapshot for offline evaluation & documentation')}
+                ${secTitle('6 · Export', 'Full snapshot for offline evaluation & documentation')}
                 <button onclick="exportAdminCSV()" class="w-full bg-stone-900 text-amber-500 font-black py-3 px-4 rounded-xl border border-amber-900/50 hover:bg-stone-800 transition-colors uppercase tracking-widest text-xs">Download CSV (all players + all BQ picks)</button>
                 <p class="text-[9px] text-stone-700 uppercase tracking-widest text-center mt-2">Snapshot: ${adminIntel.generated_at ? new Date(adminIntel.generated_at).toLocaleString('en-US', { timeZone: 'Europe/Vilnius', hour12: false }) : '—'}</p>`;
 
-            c.innerHTML = [standingsHtml, bqHtml, scenarioHtml, openHtml, exportHtml]
+            c.innerHTML = [standingsHtml, zeroHtml, bqHtml, scenarioHtml, openHtml, exportHtml]
                 .map(s => `<div>${s}</div>`).join('');
         }
 
